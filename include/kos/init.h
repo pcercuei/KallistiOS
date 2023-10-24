@@ -40,6 +40,14 @@ __BEGIN_DECLS
 */
 #define KOS_INIT_FLAGS(flags) \
     uint32 __kos_init_flags = (flags); \
+    extern void arch_init_net(void); \
+    void (*init_net_weak)(void) = ((flags) & INIT_NET) ? arch_init_net : NULL; \
+    extern void net_shutdown(void); \
+    void (*net_shutdown_weak)(void) = ((flags) & INIT_NET) ? net_shutdown : NULL; \
+    extern void bba_la_init(void); \
+    void (*bba_la_init_weak)(void) = ((flags) & INIT_NET) ? bba_la_init : NULL; \
+    extern void bba_la_shutdown(void); \
+    void (*bba_la_shutdown_weak)(void) = ((flags) & INIT_NET) ? bba_la_shutdown : NULL; \
     extern int export_init(void); \
     int (*export_init_weak)(void) = ((flags) & INIT_EXPORT) ? export_init : NULL
 
