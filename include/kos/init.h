@@ -38,7 +38,10 @@ __BEGIN_DECLS
     \see    kos_initflags
     \see    dreamcast_initflags
 */
-#define KOS_INIT_FLAGS(flags)   uint32 __kos_init_flags = (flags)
+#define KOS_INIT_FLAGS(flags) \
+    uint32 __kos_init_flags = (flags); \
+    extern int export_init(void); \
+    int (*export_init_weak)(void) = ((flags) & INIT_EXPORT) ? export_init : NULL
 
 /** \brief  The init flags. Do not modify this directly! */
 extern uint32 __kos_init_flags;
@@ -81,6 +84,7 @@ extern void * __kos_romdisk;
 #define INIT_NET            0x0004  /**< \brief Enable built-in networking */
 #define INIT_MALLOCSTATS    0x0008  /**< \brief Enable malloc statistics */
 #define INIT_QUIET          0x0010  /**< \brief Disable dbgio */
+#define INIT_EXPORT         0x0020  /**< \brief Export kernel symbols */
 /** @} */
 
 __END_DECLS
