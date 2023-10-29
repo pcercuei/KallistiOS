@@ -98,7 +98,7 @@ int nmmgr_init(void) {
     LIST_INIT(&nmmgr_handlers);
 
     /* Initialize our internal exports */
-    if (export_init_weak)
+    if(export_init_weak)
         (*export_init_weak)();
 
     return rv;
