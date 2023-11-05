@@ -128,7 +128,7 @@ inline static void dma_disable(uint32_t chn) {
     g2_dma->dma[chn].start = 0;
 }
 
-static void g2_dma_irq_hnd(uint32_t code) {
+static void g2_dma_irq_hnd(uint32_t code, void *) {
     int chn = code - ASIC_EVT_G2_DMA0;
 
     if(chn < G2_DMA_CHAN_SPU || chn > G2_DMA_CHAN_CH3) {
@@ -224,7 +224,7 @@ int g2_dma_init(void) {
         dma_cbdata[i] = 0;
 
         /* Hook the interrupt */
-        asic_evt_set_handler(ASIC_EVT_G2_DMA0 + i, g2_dma_irq_hnd);
+        asic_evt_set_handler(ASIC_EVT_G2_DMA0 + i, g2_dma_irq_hnd, NULL);
         asic_evt_enable(ASIC_EVT_G2_DMA0 + i, ASIC_IRQB);
     }
 
@@ -246,7 +246,7 @@ void g2_dma_shutdown(void) {
     for(i = 0; i < 4; i++) {
         /* Unhook the G2 interrupt */
         asic_evt_disable(ASIC_EVT_G2_DMA0 + i, ASIC_IRQB);
-        asic_evt_set_handler(ASIC_EVT_G2_DMA0 + i, NULL);
+        asic_evt_set_handler(ASIC_EVT_G2_DMA0 + i, NULL, NULL);
 
         /* Destroy the semaphore */
         sem_destroy(&dma_done[i]);

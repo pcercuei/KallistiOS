@@ -211,7 +211,7 @@ inline int g1_ata_mutex_unlock(void) {
     return mutex_unlock(&_g1_ata_mutex);
 }
 
-static void g1_dma_irq_hnd(uint32 code) {
+static void g1_dma_irq_hnd(uint32 code, void *) {
     /* XXXX: Probably should look at the code to make sure it isn't an error. */
     (void)code;
 
@@ -1388,11 +1388,11 @@ int g1_ata_init(void) {
     }
 
     /* Hook all the DMA related events. */
-    asic_evt_set_handler(ASIC_EVT_GD_DMA, g1_dma_irq_hnd);
+    asic_evt_set_handler(ASIC_EVT_GD_DMA, g1_dma_irq_hnd, NULL);
     asic_evt_enable(ASIC_EVT_GD_DMA, ASIC_IRQB);
-    asic_evt_set_handler(ASIC_EVT_GD_DMA_OVERRUN, g1_dma_irq_hnd);
+    asic_evt_set_handler(ASIC_EVT_GD_DMA_OVERRUN, g1_dma_irq_hnd, NULL);
     asic_evt_enable(ASIC_EVT_GD_DMA_OVERRUN, ASIC_IRQB);
-    asic_evt_set_handler(ASIC_EVT_GD_DMA_ILLADDR, g1_dma_irq_hnd);
+    asic_evt_set_handler(ASIC_EVT_GD_DMA_ILLADDR, g1_dma_irq_hnd, NULL);
     asic_evt_enable(ASIC_EVT_GD_DMA_ILLADDR, ASIC_IRQB);
 
     initted = 1;
@@ -1415,9 +1415,9 @@ void g1_ata_shutdown(void) {
 
     /* Unhook the events and disable the IRQs. */
     asic_evt_disable(ASIC_EVT_GD_DMA, ASIC_IRQB);
-    asic_evt_set_handler(ASIC_EVT_GD_DMA, NULL);
+    asic_evt_set_handler(ASIC_EVT_GD_DMA, NULL, NULL);
     asic_evt_disable(ASIC_EVT_GD_DMA_OVERRUN, ASIC_IRQB);
-    asic_evt_set_handler(ASIC_EVT_GD_DMA_OVERRUN, NULL);
+    asic_evt_set_handler(ASIC_EVT_GD_DMA_OVERRUN, NULL, NULL);
     asic_evt_disable(ASIC_EVT_GD_DMA_ILLADDR, ASIC_IRQB);
-    asic_evt_set_handler(ASIC_EVT_GD_DMA_ILLADDR, NULL);
+    asic_evt_set_handler(ASIC_EVT_GD_DMA_ILLADDR, NULL, NULL);
 }

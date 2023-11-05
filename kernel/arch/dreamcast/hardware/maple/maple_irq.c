@@ -179,7 +179,7 @@ static void vbl_autodetect(void) {
 }
 
 /* Called on every VBL (~60fps) */
-void maple_vbl_irq_hnd(uint32 code) {
+void maple_vbl_irq_hnd(uint32 code, void *) {
     maple_driver_t *drv;
 
     (void)code;
@@ -209,7 +209,7 @@ void maple_vbl_irq_hnd(uint32 code) {
 /* Maple DMA completion handler */
 
 /* Called after a Maple DMA send / receive pair completes */
-void maple_dma_irq_hnd(uint32 code) {
+void maple_dma_irq_hnd(uint32 code, void *) {
     maple_frame_t   *i;
     int8        resp;
     uint32 gun;

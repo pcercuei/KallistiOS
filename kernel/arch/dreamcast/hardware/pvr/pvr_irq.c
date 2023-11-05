@@ -77,7 +77,7 @@ static void dma_next_list(void *data) {
     }
 }
 
-void pvr_int_handler(uint32 code) {
+void pvr_int_handler(uint32 code, void *) {
     int bufn = pvr_state.view_target;
 
     // What kind of event did we get?

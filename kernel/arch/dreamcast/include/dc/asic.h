@@ -181,9 +181,11 @@ __BEGIN_DECLS
     interrupt context, so don't try anything funny.
 
     \param  code            The ASIC event code that generated this event.
+    \param  data            The user pointer that was passed to
+                            \ref asic_evt_set_handler.
     \see    asic_events
 */
-typedef void (*asic_evt_handler)(uint32_t code);
+typedef void (*asic_evt_handler)(uint32_t code, void *data);
 
 /** \brief   Set or remove an ASIC handler.
     \ingroup asic
@@ -193,9 +195,10 @@ typedef void (*asic_evt_handler)(uint32_t code);
 
     \param  code            The ASIC event code to hook (see \ref asic_events).
     \param  handler         The function to call when the event happens.
+    \param  data            A user pointer that will be passed to the callback.
 
 */
-void asic_evt_set_handler(uint16_t code, asic_evt_handler handler);
+void asic_evt_set_handler(uint16_t code, asic_evt_handler handler, void *data);
 
 /** \brief   Disable all ASIC events.
     \ingroup asic

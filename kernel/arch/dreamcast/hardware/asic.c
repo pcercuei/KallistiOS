@@ -110,13 +110,19 @@
 #define ASIC_EVT_REGS 3
 #define ASIC_EVT_REG_HNDS 32
 
+typedef struct {
+    asic_evt_handler hdl;
+    void *data;
+} asic_evt_handler_entry_t;
+
 /* Exception table -- this table matches each potential G2 event to a function
    pointer. If the pointer is null, then nothing happens. Otherwise, the
    function will handle the exception. */
-static asic_evt_handler asic_evt_handlers[ASIC_EVT_REGS][ASIC_EVT_REG_HNDS];
+static asic_evt_handler_entry_t
+asic_evt_handlers[ASIC_EVT_REGS][ASIC_EVT_REG_HNDS];
 
 /* Set a handler, or remove a handler */
-void asic_evt_set_handler(uint16_t code, asic_evt_handler hnd) {
+void asic_evt_set_handler(uint16_t code, asic_evt_handler hnd, void *data) {
     uint8_t evtreg, evt;
 
     evtreg = (code >> 8) & 0xff;
@@ -124,13 +130,14 @@ void asic_evt_set_handler(uint16_t code, asic_evt_handler hnd) {
 
     assert((evtreg < ASIC_EVT_REGS) && (evt < ASIC_EVT_REG_HNDS));
 
-    asic_evt_handlers[evtreg][evt] = hnd;
+    asic_evt_handlers[evtreg][evt] = (asic_evt_handler_entry_t){ hnd, data };
 }
 
 /* The ASIC event handler; this is called from the global IRQ handler
    to handle external IRQ 9. */
 static void handler_irq9(irq_t, irq_context_t *, void *data) {
-    const asic_evt_handler (*const handlers)[ASIC_EVT_REG_HNDS] = data;
+    const asic_evt_handler_entry_t (*const handlers)[ASIC_EVT_REG_HNDS] = data;
+    const asic_evt_handler_entry_t *entry;
     uint8_t reg, i;
 
     /* Go through each event register and look for pending events */
@@ -144,9 +151,10 @@ static void handler_irq9(irq_t, irq_context_t *, void *data) {
 
         /* Search for relevant handlers */
         for(i = 0; i < ASIC_EVT_REG_HNDS; i++) {
-            if((mask & (1 << i)) && handlers[reg][i] != NULL) {
-                handlers[reg][i]((reg << 8) | i);
-            }
+            entry = &handlers[reg][i];
+
+            if((mask & (1 << i)) && entry->hdl != NULL)
+                entry->hdl((reg << 8) | i, entry->data);
         }
     }
 }

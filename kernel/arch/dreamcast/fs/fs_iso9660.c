@@ -928,7 +928,7 @@ int iso_reset(void) {
    time someone calls in it'll get reset. */
 static int iso_last_status;
 static int iso_vblank_hnd;
-static void iso_vblank(uint32 evt) {
+static void iso_vblank(uint32 evt, void *) {
     int status, disc_type;
 
     (void)evt;
