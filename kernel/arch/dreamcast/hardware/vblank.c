@@ -27,11 +27,11 @@ static TAILQ_HEAD(vhlist, vblhnd) vblhnds;
 static int vblid_high;
 
 /* Our internal IRQ handler */
-static void vblank_handler(uint32 src) {
+static void vblank_handler(uint32 src, void *data) {
     struct vblhnd * t;
 
     TAILQ_FOREACH(t, &vblhnds, listent) {
-        t->handler(src);
+        t->handler(src, data);
     }
 }
 
@@ -95,7 +95,7 @@ int vblank_init(void) {
     vblid_high = 1;
 
     /* Hook and enable the interrupt */
-    asic_evt_set_handler(ASIC_EVT_PVR_VBLANK_BEGIN, vblank_handler);
+    asic_evt_set_handler(ASIC_EVT_PVR_VBLANK_BEGIN, vblank_handler, NULL);
     asic_evt_enable(ASIC_EVT_PVR_VBLANK_BEGIN, ASIC_IRQ_DEFAULT);
 
     return 0;
@@ -106,7 +106,7 @@ int vblank_shutdown(void) {
 
     /* Disable and unhook the interrupt */
     asic_evt_disable(ASIC_EVT_PVR_VBLANK_BEGIN, ASIC_IRQ_DEFAULT);
-    asic_evt_set_handler(ASIC_EVT_PVR_VBLANK_BEGIN, NULL);
+    asic_evt_remove_handler(ASIC_EVT_PVR_VBLANK_BEGIN);
 
     /* Free any allocated handlers */
     c = TAILQ_FIRST(&vblhnds);

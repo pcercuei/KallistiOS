@@ -229,7 +229,7 @@ static volatile int link_stable;
 static eth_rx_callback_t eth_rx_callback;
 
 /* Forward-declaration for IRQ handler */
-static void bba_irq_hnd(uint32 code);
+static void bba_irq_hnd(uint32 code, void *data);
 
 /* Reads the MAC address of the BBA into the specified array */
 void bba_get_mac(uint8 *arr) {
@@ -363,7 +363,7 @@ static int bba_hw_init(void) {
     g2_write_16(NIC(RT_MULTIINTR), 0);
 
     /* Enable G2 interrupts */
-    asic_evt_set_handler(ASIC_EVT_EXP_PCI, bba_irq_hnd);
+    asic_evt_set_handler(ASIC_EVT_EXP_PCI, bba_irq_hnd, NULL);
     asic_evt_enable(ASIC_EVT_EXP_PCI, BBA_ASIC_IRQ);
 
     /* Enable receive interrupts */
@@ -420,7 +420,7 @@ static void bba_hw_shutdown(void) {
 
     /* Disable G2 interrupts */
     asic_evt_disable(ASIC_EVT_EXP_PCI, BBA_ASIC_IRQ);
-    asic_evt_set_handler(ASIC_EVT_EXP_PCI, NULL);
+    asic_evt_remove_handler(ASIC_EVT_EXP_PCI);
 }
 
 static void g2_read_block_8_fast(uint8 *dst, uint8 *src, int len) {
@@ -808,10 +808,11 @@ static void bba_link_change(void) {
 }
 
 /* Ethernet IRQ handler */
-static void bba_irq_hnd(uint32 code) {
+static void bba_irq_hnd(uint32 code, void *data) {
     int intr, hnd;
 
     (void)code;
+    (void)data;
 
     /* Acknowledge 8193 interrupt, except RX ACK bits. We'll handle
        those in the RX int handler. */

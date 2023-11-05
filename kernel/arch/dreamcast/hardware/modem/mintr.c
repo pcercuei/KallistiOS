@@ -577,8 +577,9 @@ void modemConnection(void) {
     }
 }
 
-static void modemCallback(uint32 code) {
+static void modemCallback(uint32 code, void *data) {
     (void)code;
+    (void)data;
 
     if(modemCallbackCode != NULL)
         modemCallbackCode();
@@ -597,13 +598,13 @@ void modemIntInit(void) {
 
     /* Set the default IRQ handler */
     modemCallbackCode = NULL;
-    asic_evt_set_handler(ASIC_EVT_EXP_8BIT, modemCallback);
+    asic_evt_set_handler(ASIC_EVT_EXP_8BIT, modemCallback, NULL);
     asic_evt_enable(ASIC_EVT_EXP_8BIT, ASIC_IRQB);
 }
 
 void modemIntShutdown(void) {
     asic_evt_disable(ASIC_EVT_EXP_8BIT, ASIC_IRQB);
-    asic_evt_set_handler(ASIC_EVT_EXP_8BIT, NULL);
+    asic_evt_remove_handler(ASIC_EVT_EXP_8BIT);
 }
 
 #define dspSetClear8(addr, mask, clear)\

@@ -756,15 +756,17 @@ void maple_detach_callback(uint32 functions, maple_detach_callback_t cb);
     \ingroup maple
     
     \param  code            The ASIC event code.
+    \param  data            The user pointer associated with this callback.
 */
-void maple_vbl_irq_hnd(uint32 code);
+void maple_vbl_irq_hnd(uint32 code, void *data);
 
 /** \brief   Called after a Maple DMA send / receive pair completes.
     \ingroup maple 
     
     \param  code            The ASIC event code.
+    \param  data            The user pointer associated with this callback.
 */
-void maple_dma_irq_hnd(uint32 code);
+void maple_dma_irq_hnd(uint32 code, void *data);
 
 /**************************************************************************/
 /* maple_enum.c */

@@ -928,10 +928,11 @@ int iso_reset(void) {
    time someone calls in it'll get reset. */
 static int iso_last_status;
 static int iso_vblank_hnd;
-static void iso_vblank(uint32 evt) {
+static void iso_vblank(uint32 evt, void *data) {
     int status, disc_type;
 
     (void)evt;
+    (void)data;
 
     /* Get the status. This may fail if a CD operation is in
        progress in the foreground. */
