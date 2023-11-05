@@ -22,6 +22,7 @@ struct vblhnd {
     TAILQ_ENTRY(vblhnd) listent;
     int         id;
     asic_evt_handler    handler;
+    void *data;
 };
 static TAILQ_HEAD(vhlist, vblhnd) vblhnds;
 static int vblid_high;
@@ -30,12 +31,14 @@ static int vblid_high;
 static void vblank_handler(uint32 src, void *data) {
     struct vblhnd * t;
 
+    (void)data;
+
     TAILQ_FOREACH(t, &vblhnds, listent) {
-        t->handler(src, data);
+        t->handler(src, t->data);
     }
 }
 
-int vblank_handler_add(asic_evt_handler hnd) {
+int vblank_handler_add(asic_evt_handler hnd, void *data) {
     struct vblhnd * vh;
     int old;
 
@@ -55,6 +58,7 @@ int vblank_handler_add(asic_evt_handler hnd) {
 
     /* Finish filling the struct */
     vh->handler = hnd;
+    vh->data = data;
 
     /* Add it to the list */
     TAILQ_INSERT_TAIL(&vblhnds, vh, listent);

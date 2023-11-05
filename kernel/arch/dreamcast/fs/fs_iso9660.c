@@ -1078,7 +1078,7 @@ int fs_iso9660_init(void) {
     iso_last_status = -1;
 
     /* Register with the vblank */
-    iso_vblank_hnd = vblank_handler_add(iso_vblank);
+    iso_vblank_hnd = vblank_handler_add(iso_vblank, NULL);
 
     /* Register with VFS */
     return nmmgr_handler_add(&vh.nmmgr);

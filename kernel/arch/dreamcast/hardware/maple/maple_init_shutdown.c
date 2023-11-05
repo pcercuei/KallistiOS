@@ -95,7 +95,7 @@ static void maple_hw_init(void) {
     maple_bus_enable();
 
     /* Hook the necessary interrupts */
-    maple_state.vbl_handle = vblank_handler_add(maple_vbl_irq_hnd);
+    maple_state.vbl_handle = vblank_handler_add(maple_vbl_irq_hnd, NULL);
     asic_evt_set_handler(ASIC_EVT_MAPLE_DMA, maple_dma_irq_hnd, NULL);
     asic_evt_enable(ASIC_EVT_MAPLE_DMA, ASIC_IRQ_DEFAULT);
 }
