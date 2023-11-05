@@ -175,6 +175,8 @@ TAILQ_HEAD(maple_frame_queue, maple_frame);
 
 struct maple_driver;
 LIST_HEAD(maple_driver_list, maple_driver);
+
+struct maple_state_str;
 /* \endcond */
 
 /** \brief   Maple frame to be queued for transport.
@@ -200,7 +202,7 @@ typedef struct maple_frame {
 
     struct maple_device *dev;       /**< \brief Does this belong to a device? */
 
-    void (*callback)(struct maple_frame *);     /**< \brief Response callback */
+    void (*callback)(struct maple_state_str *, struct maple_frame *);     /**< \brief Response callback */
 
 #if MAPLE_DMA_DEBUG
     uint8   recv_buf_arr[1024 + 1024 + 32]; /**< \brief Response receive area */
