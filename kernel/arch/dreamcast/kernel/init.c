@@ -102,7 +102,7 @@ int fs_romdisk_mount_builtin(void) {
 /* Auto-init stuff: override with a non-weak symbol if you don't want all of
    this to be linked into your code (and do the same with the
    arch_auto_shutdown function too). */
-int  __attribute__((weak)) arch_auto_init(void) {
+int  __weak arch_auto_init(void) {
     /* Initialize memory management */
     mm_init();
 
@@ -194,7 +194,7 @@ int  __attribute__((weak)) arch_auto_init(void) {
     return 0;
 }
 
-void  __attribute__((weak)) arch_auto_shutdown(void) {
+void  __weak arch_auto_shutdown(void) {
 #ifndef _arch_sub_naomi
     fs_dclsocket_shutdown();
     if(net_shutdown_weak)
