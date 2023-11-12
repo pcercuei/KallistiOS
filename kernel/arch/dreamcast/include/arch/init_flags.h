@@ -44,6 +44,22 @@ __BEGIN_DECLS
     \sa KOS_INIT_FLAGS()
 */
 #define KOS_INIT_FLAGS_ARCH(flags) \
+    KOS_INIT_FLAG(flags, INIT_CONTROLLER, cont_init); \
+    KOS_INIT_FLAG(flags, INIT_CONTROLLER, cont_shutdown); \
+    KOS_INIT_FLAG(flags, INIT_KEYBOARD, kbd_init); \
+    KOS_INIT_FLAG(flags, INIT_KEYBOARD, kbd_shutdown); \
+    KOS_INIT_FLAG(flags, INIT_MOUSE, mouse_init); \
+    KOS_INIT_FLAG(flags, INIT_MOUSE, mouse_shutdown); \
+    KOS_INIT_FLAG(flags, INIT_LIGHTGUN, lightgun_init); \
+    KOS_INIT_FLAG(flags, INIT_LIGHTGUN, lightgun_shutdown); \
+    KOS_INIT_FLAG(flags, INIT_VMU, vmu_init); \
+    KOS_INIT_FLAG(flags, INIT_VMU, vmu_shutdown); \
+    KOS_INIT_FLAG(flags, INIT_PURUPURU, purupuru_init); \
+    KOS_INIT_FLAG(flags, INIT_PURUPURU, purupuru_shutdown); \
+    KOS_INIT_FLAG(flags, INIT_SIP, sip_init); \
+    KOS_INIT_FLAG(flags, INIT_SIP, sip_shutdown); \
+    KOS_INIT_FLAG(flags, INIT_DREAMEYE, dreameye_init); \
+    KOS_INIT_FLAG(flags, INIT_DREAMEYE, dreameye_shutdown)
 
 
 /** \name  Init Flags
@@ -57,7 +73,17 @@ __BEGIN_DECLS
 */
 
 /** \brief Default init flags for the Dreamcast. */
-#define INIT_DEFAULT_ARCH   (0)
+#define INIT_DEFAULT_ARCH   (INIT_MAPLE_ALL)
+
+#define INIT_CONTROLLER     0x00001000  /**< \brief Enable Controller maple driver */
+#define INIT_KEYBOARD       0x00002000  /**< \brief Enable Keyboard maple driver */
+#define INIT_MOUSE          0x00004000  /**< \brief Enable Mouse maple driver */
+#define INIT_LIGHTGUN       0x00008000  /**< \brief Enable Lightgun maple driver */
+#define INIT_VMU            0x00010000  /**< \brief Enable VMU maple driver */
+#define INIT_PURUPURU       0x00020000  /**< \brief Enable Puru Puru maple driver */
+#define INIT_SIP            0x00040000  /**< \brief Enable Sound input maple driver */
+#define INIT_DREAMEYE       0x00080000  /**< \brief Enable DreamEye maple driver */
+#define INIT_MAPLE_ALL      0x000ff000  /**< \brief Enable all Maple drivers */
 
 #define INIT_OCRAM          0x10000000  /**< \brief Use half of the dcache as RAM */
 #define INIT_NO_DCLOAD      0x20000000  /**< \brief Disable dcload */

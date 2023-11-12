@@ -5,6 +5,7 @@
  */
 
 #include <malloc.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <assert.h>
 #include <arch/memory.h>
@@ -12,6 +13,7 @@
 #include <dc/asic.h>
 #include <dc/vblank.h>
 #include <kos/thread.h>
+#include <kos/init.h>
 
 #include <dc/maple/controller.h>
 #include <dc/maple/keyboard.h>
@@ -170,30 +172,48 @@ void maple_wait_scan(void) {
     }
 }
 
+KOS_INIT_FLAG_WEAK(cont_init, true);
+KOS_INIT_FLAG_WEAK(kbd_init, true);
+KOS_INIT_FLAG_WEAK(mouse_init, true);
+KOS_INIT_FLAG_WEAK(lightgun_init, true);
+KOS_INIT_FLAG_WEAK(vmu_init, true);
+KOS_INIT_FLAG_WEAK(purupuru_init, true);
+KOS_INIT_FLAG_WEAK(sip_init, true);
+KOS_INIT_FLAG_WEAK(dreameye_init, true);
+
 /* Full init: initialize known drivers and start maple operations */
 int maple_init(void) {
-    lightgun_init();
-    cont_init();
-    kbd_init();
-    mouse_init();
-    vmu_init();
-    purupuru_init();
-    sip_init();
-    dreameye_init();
+    KOS_INIT_FLAG_CALL(lightgun_init);
+    KOS_INIT_FLAG_CALL(cont_init);
+    KOS_INIT_FLAG_CALL(kbd_init);
+    KOS_INIT_FLAG_CALL(mouse_init);
+    KOS_INIT_FLAG_CALL(vmu_init);
+    KOS_INIT_FLAG_CALL(purupuru_init);
+    KOS_INIT_FLAG_CALL(sip_init);
+    KOS_INIT_FLAG_CALL(dreameye_init);
 
     return maple_hw_init();
 }
+
+KOS_INIT_FLAG_WEAK(cont_shutdown, true);
+KOS_INIT_FLAG_WEAK(kbd_shutdown, true);
+KOS_INIT_FLAG_WEAK(mouse_shutdown, true);
+KOS_INIT_FLAG_WEAK(lightgun_shutdown, true);
+KOS_INIT_FLAG_WEAK(vmu_shutdown, true);
+KOS_INIT_FLAG_WEAK(purupuru_shutdown, true);
+KOS_INIT_FLAG_WEAK(sip_shutdown, true);
+KOS_INIT_FLAG_WEAK(dreameye_shutdown, true);
 
 /* Full shutdown: shutdown maple operations and known drivers */
 void maple_shutdown(void) {
     maple_hw_shutdown();
 
-    dreameye_shutdown();
-    sip_shutdown();
-    purupuru_shutdown();
-    vmu_shutdown();
-    mouse_shutdown();
-    kbd_shutdown();
-    cont_shutdown();
-    lightgun_shutdown();
+    KOS_INIT_FLAG_CALL(dreameye_shutdown);
+    KOS_INIT_FLAG_CALL(sip_shutdown);
+    KOS_INIT_FLAG_CALL(purupuru_shutdown);
+    KOS_INIT_FLAG_CALL(vmu_shutdown);
+    KOS_INIT_FLAG_CALL(mouse_shutdown);
+    KOS_INIT_FLAG_CALL(kbd_shutdown);
+    KOS_INIT_FLAG_CALL(cont_shutdown);
+    KOS_INIT_FLAG_CALL(lightgun_shutdown);
 }
