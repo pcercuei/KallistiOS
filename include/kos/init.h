@@ -48,10 +48,10 @@ __BEGIN_DECLS
     void (*bba_la_init_weak)(void) = ((flags) & INIT_NET) ? bba_la_init : NULL; \
     extern void bba_la_shutdown(void); \
     void (*bba_la_shutdown_weak)(void) = ((flags) & INIT_NET) ? bba_la_shutdown : NULL; \
-    extern int fs_romdisk_init(void); \
-    int (*fs_romdisk_init_weak)(void) = ((flags) & INIT_FS_ROMDISK) ? fs_romdisk_init : NULL; \
-    extern int fs_romdisk_shutdown(void); \
-    int (*fs_romdisk_shutdown_weak)(void) = ((flags) & INIT_FS_ROMDISK) ? fs_romdisk_shutdown : NULL; \
+    extern void fs_romdisk_init(void); \
+    void (*fs_romdisk_init_weak)(void) = ((flags) & INIT_FS_ROMDISK) ? fs_romdisk_init : NULL; \
+    extern void fs_romdisk_shutdown(void); \
+    void (*fs_romdisk_shutdown_weak)(void) = ((flags) & INIT_FS_ROMDISK) ? fs_romdisk_shutdown : NULL; \
     extern int export_init(void); \
     int (*export_init_weak)(void) = ((flags) & INIT_EXPORT) ? export_init : NULL
 

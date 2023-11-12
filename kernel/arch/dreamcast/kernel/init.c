@@ -89,8 +89,8 @@ void arch_init_net(void) {
 void (*init_net_weak)(void) __attribute__((weak));
 void (*net_shutdown_weak)(void) __attribute__((weak));
 
-int (*fs_romdisk_init_weak)(void) __attribute__((weak));
-int (*fs_romdisk_shutdown_weak)(void) __attribute__((weak));
+void (*fs_romdisk_init_weak)(void) __attribute__((weak));
+void (*fs_romdisk_shutdown_weak)(void) __attribute__((weak));
 int (*fs_romdisk_mount_builtin_weak)(void) __attribute__((weak));
 int (*fs_romdisk_mount_builtin_weak_legacy)(void) __attribute__((weak));
 
