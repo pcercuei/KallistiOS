@@ -52,8 +52,8 @@ __BEGIN_DECLS
     void (*fs_romdisk_init_weak)(void) = ((flags) & INIT_FS_ROMDISK) ? fs_romdisk_init : NULL; \
     extern void fs_romdisk_shutdown(void); \
     void (*fs_romdisk_shutdown_weak)(void) = ((flags) & INIT_FS_ROMDISK) ? fs_romdisk_shutdown : NULL; \
-    extern int export_init(void); \
-    int (*export_init_weak)(void) = ((flags) & INIT_EXPORT) ? export_init : NULL
+    extern void export_init(void); \
+    void (*export_init_weak)(void) = ((flags) & INIT_EXPORT) ? export_init : NULL
 
 /** \brief  The init flags. Do not modify this directly! */
 extern uint32 __kos_init_flags;
