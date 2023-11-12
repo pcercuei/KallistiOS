@@ -88,6 +88,16 @@ void arch_init_net(void) {
     }
 }
 
+void vmu_fs_init(void) {
+    fs_vmu_init();
+    vmufs_init();
+}
+
+void vmu_fs_shutdown(void) {
+    fs_vmu_shutdown();
+    vmufs_shutdown();
+}
+
 /* Mount the built-in romdisk to /rd. */
 void fs_romdisk_mount_builtin(void) {
     fs_romdisk_mount("/rd", __kos_romdisk, 0);
@@ -104,6 +114,8 @@ KOS_INIT_FLAG_WEAK(fs_romdisk_init, true);
 KOS_INIT_FLAG_WEAK(fs_romdisk_shutdown, true);
 KOS_INIT_FLAG_WEAK(fs_romdisk_mount_builtin, false);
 KOS_INIT_FLAG_WEAK(fs_romdisk_mount_builtin_legacy, false);
+KOS_INIT_FLAG_WEAK(vmu_fs_init, true);
+KOS_INIT_FLAG_WEAK(vmu_fs_shutdown, true);
 
 /* Auto-init stuff: override with a non-weak symbol if you don't want all of
    this to be linked into your code (and do the same with the
@@ -175,8 +187,8 @@ int  __weak arch_auto_init(void) {
 
     fs_iso9660_init();
 #endif
-    vmufs_init();
-    fs_vmu_init();
+
+    KOS_INIT_FLAG_CALL(vmu_fs_init);
 
     /* Initialize library handling */
     library_init();
@@ -209,8 +221,7 @@ void  __weak arch_auto_shutdown(void) {
 #ifndef _arch_sub_naomi
     fs_dcload_shutdown();
 #endif
-    fs_vmu_shutdown();
-    vmufs_shutdown();
+    KOS_INIT_FLAG_CALL(vmu_fs_shutdown);
 #ifndef _arch_sub_naomi
     fs_iso9660_shutdown();
 #endif

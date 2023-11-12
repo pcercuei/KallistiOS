@@ -54,6 +54,8 @@ __BEGIN_DECLS
     KOS_INIT_FLAG(flags, INIT_LIGHTGUN, lightgun_shutdown); \
     KOS_INIT_FLAG(flags, INIT_VMU, vmu_init); \
     KOS_INIT_FLAG(flags, INIT_VMU, vmu_shutdown); \
+    KOS_INIT_FLAG(flags, INIT_VMU, vmu_fs_init); \
+    KOS_INIT_FLAG(flags, INIT_VMU, vmu_fs_shutdown); \
     KOS_INIT_FLAG(flags, INIT_PURUPURU, purupuru_init); \
     KOS_INIT_FLAG(flags, INIT_PURUPURU, purupuru_shutdown); \
     KOS_INIT_FLAG(flags, INIT_SIP, sip_init); \
