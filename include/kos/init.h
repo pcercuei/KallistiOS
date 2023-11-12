@@ -61,8 +61,8 @@ extern uint32 __kos_init_flags;
 /** \brief  Deprecated and not useful anymore. */
 #define KOS_INIT_ROMDISK(rd) \
     void *__kos_romdisk = (rd); \
-    extern int fs_romdisk_mount_builtin(void); \
-    int (*fs_romdisk_mount_builtin_weak_legacy)(void) = fs_romdisk_mount_builtin
+    extern void fs_romdisk_mount_builtin(void); \
+    void (*fs_romdisk_mount_builtin_weak_legacy)(void) = fs_romdisk_mount_builtin
 
 /** \brief  Built-in romdisk. Do not modify this directly! */
 extern void * __kos_romdisk;

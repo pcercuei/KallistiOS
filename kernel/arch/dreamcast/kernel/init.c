@@ -91,12 +91,12 @@ void (*net_shutdown_weak)(void) __attribute__((weak));
 
 void (*fs_romdisk_init_weak)(void) __attribute__((weak));
 void (*fs_romdisk_shutdown_weak)(void) __attribute__((weak));
-int (*fs_romdisk_mount_builtin_weak)(void) __attribute__((weak));
-int (*fs_romdisk_mount_builtin_weak_legacy)(void) __attribute__((weak));
+void (*fs_romdisk_mount_builtin_weak)(void) __attribute__((weak));
+void (*fs_romdisk_mount_builtin_weak_legacy)(void) __attribute__((weak));
 
 /* Mount the built-in romdisk to /rd. */
-int fs_romdisk_mount_builtin(void) {
-    return fs_romdisk_mount("/rd", __kos_romdisk, 0);
+void fs_romdisk_mount_builtin(void) {
+    fs_romdisk_mount("/rd", __kos_romdisk, 0);
 }
 
 /* Auto-init stuff: override with a non-weak symbol if you don't want all of
