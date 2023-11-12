@@ -55,7 +55,8 @@ __BEGIN_DECLS
      KOS_INIT_FLAG(flags, INIT_NET, bba_la_shutdown); \
      KOS_INIT_FLAG(flags, INIT_FS_ROMDISK, fs_romdisk_init); \
      KOS_INIT_FLAG(flags, INIT_FS_ROMDISK, fs_romdisk_shutdown); \
-     KOS_INIT_FLAG(flags, INIT_EXPORT, export_init)
+     KOS_INIT_FLAG(flags, INIT_EXPORT, export_init); \
+     KOS_INIT_FLAGS_ARCH(flags)
 
 /** \cond */
 extern const uint32_t __kos_init_flags;
@@ -91,18 +92,18 @@ extern void * __kos_romdisk;
     @{
 */
 /** \brief  Default init flags (IRQs on, preemption enabled, romdisks). */
-#define INIT_DEFAULT \
-    (INIT_IRQ | INIT_THD_PREEMPT | INIT_FS_ROMDISK)
+#define INIT_DEFAULT    (INIT_IRQ | INIT_THD_PREEMPT | INIT_FS_ROMDISK | \
+                         INIT_DEFAULT_ARCH)
 
-#define INIT_NONE           0x0000  /**< \brief Don't init optional things */
-#define INIT_IRQ            0x0001  /**< \brief Enable IRQs at startup */
+#define INIT_NONE        0x00000000  /**< \brief Don't init optional things */
+#define INIT_IRQ         0x00000001  /**< \brief Enable IRQs at startup */
 /* Preemptive mode is the only mode now. Keeping define for compatability. */
-#define INIT_THD_PREEMPT    0x0002  /**< \brief Enable thread preemption */
-#define INIT_NET            0x0004  /**< \brief Enable built-in networking */
-#define INIT_MALLOCSTATS    0x0008  /**< \brief Enable malloc statistics */
-#define INIT_QUIET          0x0010  /**< \brief Disable dbgio */
-#define INIT_EXPORT         0x0020  /**< \brief Export kernel symbols */
-#define INIT_FS_ROMDISK     0x0040  /**< \brief Enable support for romdisks */
+#define INIT_THD_PREEMPT 0x00000002  /**< \deprecated Already default mode */
+#define INIT_NET         0x00000004  /**< \brief Enable built-in networking */
+#define INIT_MALLOCSTATS 0x00000008  /**< \brief Enable malloc statistics */
+#define INIT_QUIET       0x00000010  /**< \brief Disable dbgio */
+#define INIT_EXPORT      0x00000020  /**< \brief Export kernel symbols */
+#define INIT_FS_ROMDISK  0x00000040  /**< \brief Enable support for romdisks */
 /** @} */
 
 __END_DECLS
