@@ -59,7 +59,10 @@ __BEGIN_DECLS
     KOS_INIT_FLAG(flags, INIT_SIP, sip_init); \
     KOS_INIT_FLAG(flags, INIT_SIP, sip_shutdown); \
     KOS_INIT_FLAG(flags, INIT_DREAMEYE, dreameye_init); \
-    KOS_INIT_FLAG(flags, INIT_DREAMEYE, dreameye_shutdown)
+    KOS_INIT_FLAG(flags, INIT_DREAMEYE, dreameye_shutdown); \
+    KOS_INIT_FLAG(flags, INIT_MAPLE_ALL, maple_wait_scan); \
+    KOS_INIT_FLAG(flags, INIT_MAPLE_ALL, maple_init); \
+    KOS_INIT_FLAG(flags, INIT_MAPLE_ALL, maple_shutdown)
 
 
 /** \name  Init Flags

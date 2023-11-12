@@ -35,7 +35,7 @@
 */
 
 /* Initialize Hardware (call after driver inits) */
-int maple_hw_init(void) {
+static void maple_hw_init(void) {
     maple_driver_t *drv;
     int p, u;
 
@@ -98,8 +98,6 @@ int maple_hw_init(void) {
     maple_state.vbl_handle = vblank_handler_add(maple_vbl_irq_hnd);
     asic_evt_set_handler(ASIC_EVT_MAPLE_DMA, maple_dma_irq_hnd);
     asic_evt_enable(ASIC_EVT_MAPLE_DMA, ASIC_IRQ_DEFAULT);
-
-    return 0;
 }
 
 /* Turn off the maple bus, free mem */
@@ -182,7 +180,7 @@ KOS_INIT_FLAG_WEAK(sip_init, true);
 KOS_INIT_FLAG_WEAK(dreameye_init, true);
 
 /* Full init: initialize known drivers and start maple operations */
-int maple_init(void) {
+void maple_init(void) {
     KOS_INIT_FLAG_CALL(lightgun_init);
     KOS_INIT_FLAG_CALL(cont_init);
     KOS_INIT_FLAG_CALL(kbd_init);
@@ -192,7 +190,7 @@ int maple_init(void) {
     KOS_INIT_FLAG_CALL(sip_init);
     KOS_INIT_FLAG_CALL(dreameye_init);
 
-    return maple_hw_init();
+    maple_hw_init();
 }
 
 KOS_INIT_FLAG_WEAK(cont_shutdown, true);

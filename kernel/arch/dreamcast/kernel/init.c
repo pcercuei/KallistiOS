@@ -99,6 +99,7 @@ void fs_romdisk_mount_builtin_legacy(void) {
 
 KOS_INIT_FLAG_WEAK(arch_init_net, false);
 KOS_INIT_FLAG_WEAK(net_shutdown, false);
+KOS_INIT_FLAG_WEAK(maple_wait_scan, true);
 KOS_INIT_FLAG_WEAK(fs_romdisk_init, true);
 KOS_INIT_FLAG_WEAK(fs_romdisk_shutdown, true);
 KOS_INIT_FLAG_WEAK(fs_romdisk_mount_builtin, false);
@@ -183,7 +184,7 @@ int  __weak arch_auto_init(void) {
     /* Now comes the optional stuff */
     if(__kos_init_flags & INIT_IRQ) {
         irq_enable();       /* Turn on IRQs */
-        maple_wait_scan();  /* Wait for the maple scan to complete */
+        KOS_INIT_FLAG_CALL(maple_wait_scan);  /* Wait for the maple scan to complete */
     }
 
 #ifndef _arch_sub_naomi

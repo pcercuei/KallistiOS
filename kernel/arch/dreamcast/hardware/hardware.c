@@ -56,6 +56,7 @@ void bba_la_shutdown(void) {
 
 KOS_INIT_FLAG_WEAK(bba_la_init, false);
 KOS_INIT_FLAG_WEAK(bba_la_shutdown, false);
+KOS_INIT_FLAG_WEAK(maple_init, true);
 
 int hardware_periph_init(void) {
     /* Init sound */
@@ -68,7 +69,7 @@ int hardware_periph_init(void) {
 #endif
 
     /* Setup maple bus */
-    maple_init();
+    KOS_INIT_FLAG_CALL(maple_init);
 
     /* Init video */
     vid_init(DEFAULT_VID_MODE, DEFAULT_PIXEL_MODE);
@@ -82,13 +83,15 @@ int hardware_periph_init(void) {
     return 0;
 }
 
+KOS_INIT_FLAG_WEAK(maple_shutdown, true);
+
 void hardware_shutdown(void) {
     switch(initted) {
         case 2:
 #ifndef _arch_sub_naomi
             KOS_INIT_FLAG_CALL(bba_la_shutdown);
 #endif
-            maple_shutdown();
+            KOS_INIT_FLAG_CALL(maple_shutdown);
 #if 0
             cdrom_shutdown();
 #endif
