@@ -3,6 +3,8 @@
    include/kos/init.h
    Copyright (C) 2001 Megan Potter
    Copyright (C) 2023 Lawrence Sebald
+   Copyright (C) 2023 Paul Cercueil
+   Copyright (C) 2023 Falco Girgis
 
 */
 
@@ -14,9 +16,13 @@
     architecture-independent are specified here, however this file also includes
     the architecture-specific file to bring in those flags as well.
 
-    \author Lawrence Sebald
+    \sa     arch/init_flags.h
+    \sa     kos/init_base.h
+
     \author Megan Potter
-    \see    arch/init_flags.h
+    \author Lawrence Sebald
+    \author Paul Cercueil
+    \author Falco Girgis
 */
 
 #ifndef __KOS_INIT_H
@@ -25,35 +31,31 @@
 #include <kos/cdefs.h>
 __BEGIN_DECLS
 
-#include <arch/types.h>
 #include <arch/init_flags.h>
+#include <kos/init_base.h>
+#include <stdint.h>
 
-/** \brief  Use this macro to determine the level of initialization you'd like
-            in your program by default.
+/** \brief  Exports and initializes the given KOS subsystems.
 
-    The defaults will be fine for most things, and will be used if you do not
-    specify any init flags yourself.
+    KOS_INIT_FLAGS() provides a mechanism through which various components
+    of KOS can be enabled and initialized depending on whether their flag
+    has been included within the list.
+
+    \note
+    When no KOS_INIT_FLAGS() have been explicitly provided, the default
+    flags used by KOS are equivalent to KOS_INIT_FLAGS(INIT_DEFAULT).
 
     \param  flags           Parts of KOS to init.
-    \see    kos_initflags
-    \see    dreamcast_initflags
-*/
-#define KOS_INIT_FLAGS(flags) \
-    const uint32_t __kos_init_flags = (flags); \
-    extern void arch_init_net(void); \
-    void (*init_net_weak)(void) = ((flags) & INIT_NET) ? arch_init_net : NULL; \
-    extern void net_shutdown(void); \
-    void (*net_shutdown_weak)(void) = ((flags) & INIT_NET) ? net_shutdown : NULL; \
-    extern void bba_la_init(void); \
-    void (*bba_la_init_weak)(void) = ((flags) & INIT_NET) ? bba_la_init : NULL; \
-    extern void bba_la_shutdown(void); \
-    void (*bba_la_shutdown_weak)(void) = ((flags) & INIT_NET) ? bba_la_shutdown : NULL; \
-    extern void fs_romdisk_init(void); \
-    void (*fs_romdisk_init_weak)(void) = ((flags) & INIT_FS_ROMDISK) ? fs_romdisk_init : NULL; \
-    extern void fs_romdisk_shutdown(void); \
-    void (*fs_romdisk_shutdown_weak)(void) = ((flags) & INIT_FS_ROMDISK) ? fs_romdisk_shutdown : NULL; \
-    extern void export_init(void); \
-    void (*export_init_weak)(void) = ((flags) & INIT_EXPORT) ? export_init : NULL
+ */
+ #define KOS_INIT_FLAGS(flags) \
+     const uint32_t __kos_init_flags = (flags); \
+     KOS_INIT_FLAG(flags, INIT_NET, arch_init_net); \
+     KOS_INIT_FLAG(flags, INIT_NET, net_shutdown); \
+     KOS_INIT_FLAG(flags, INIT_NET, bba_la_init); \
+     KOS_INIT_FLAG(flags, INIT_NET, bba_la_shutdown); \
+     KOS_INIT_FLAG(flags, INIT_FS_ROMDISK, fs_romdisk_init); \
+     KOS_INIT_FLAG(flags, INIT_FS_ROMDISK, fs_romdisk_shutdown); \
+     KOS_INIT_FLAG(flags, INIT_EXPORT, export_init)
 
 /** \cond */
 extern const uint32_t __kos_init_flags;
@@ -62,8 +64,9 @@ extern const uint32_t __kos_init_flags;
 /** \brief  Deprecated and not useful anymore. */
 #define KOS_INIT_ROMDISK(rd) \
     void *__kos_romdisk = (rd); \
-    extern void fs_romdisk_mount_builtin(void); \
-    void (*fs_romdisk_mount_builtin_weak_legacy)(void) = fs_romdisk_mount_builtin
+    extern void fs_romdisk_mount_builtin_legacy(void); \
+    void (*fs_romdisk_mount_builtin_legacy_weak)(void) = fs_romdisk_mount_builtin_legacy
+
 
 /** \brief  Built-in romdisk. Do not modify this directly! */
 extern void * __kos_romdisk;

@@ -8,8 +8,10 @@
 #include <stdio.h>
 #include <malloc.h>
 #include <string.h>
+#include <stdbool.h>
 #include <stdlib.h>
 #include <kos/dbgio.h>
+#include <kos/init.h>
 #include <arch/arch.h>
 #include <arch/irq.h>
 #include <arch/memory.h>
@@ -86,18 +88,21 @@ void arch_init_net(void) {
     }
 }
 
-void (*init_net_weak)(void) __attribute__((weak));
-void (*net_shutdown_weak)(void) __attribute__((weak));
-
-void (*fs_romdisk_init_weak)(void) __attribute__((weak));
-void (*fs_romdisk_shutdown_weak)(void) __attribute__((weak));
-void (*fs_romdisk_mount_builtin_weak)(void) __attribute__((weak));
-void (*fs_romdisk_mount_builtin_weak_legacy)(void) __attribute__((weak));
-
 /* Mount the built-in romdisk to /rd. */
 void fs_romdisk_mount_builtin(void) {
     fs_romdisk_mount("/rd", __kos_romdisk, 0);
 }
+
+void fs_romdisk_mount_builtin_legacy(void) {
+    fs_romdisk_mount_builtin();
+}
+
+KOS_INIT_FLAG_WEAK(arch_init_net, false);
+KOS_INIT_FLAG_WEAK(net_shutdown, false);
+KOS_INIT_FLAG_WEAK(fs_romdisk_init, true);
+KOS_INIT_FLAG_WEAK(fs_romdisk_shutdown, true);
+KOS_INIT_FLAG_WEAK(fs_romdisk_mount_builtin, false);
+KOS_INIT_FLAG_WEAK(fs_romdisk_mount_builtin_legacy, false);
 
 /* Auto-init stuff: override with a non-weak symbol if you don't want all of
    this to be linked into your code (and do the same with the
@@ -146,10 +151,7 @@ int  __weak arch_auto_init(void) {
     fs_init();          /* VFS */
     fs_pty_init();          /* Pty */
     fs_ramdisk_init();      /* Ramdisk */
-
-    if(fs_romdisk_init_weak) {
-        fs_romdisk_init_weak(); /* Romdisk */
-    }
+    KOS_INIT_FLAG_CALL(fs_romdisk_init);    /* Romdisk */
 
 /* The arc4random_buf() function used for random & urandom is only
    available in newlib starting with version 2.4.0 */
@@ -161,10 +163,8 @@ int  __weak arch_auto_init(void) {
 
     hardware_periph_init();     /* DC peripheral init */
 
-    if(fs_romdisk_mount_builtin_weak)
-        fs_romdisk_mount_builtin_weak();
-    else if(fs_romdisk_mount_builtin_weak_legacy)
-        fs_romdisk_mount_builtin_weak_legacy();
+    if(!KOS_INIT_FLAG_CALL(fs_romdisk_mount_builtin))
+        KOS_INIT_FLAG_CALL(fs_romdisk_mount_builtin_legacy);
 
 #ifndef _arch_sub_naomi
     if(!(__kos_init_flags & INIT_NO_DCLOAD) && *DCLOADMAGICADDR == DCLOADMAGICVALUE) {
@@ -187,8 +187,7 @@ int  __weak arch_auto_init(void) {
     }
 
 #ifndef _arch_sub_naomi
-    if(init_net_weak)
-        (*init_net_weak)();
+    KOS_INIT_FLAG_CALL(arch_init_net);
 #endif
 
     return 0;
@@ -197,8 +196,7 @@ int  __weak arch_auto_init(void) {
 void  __weak arch_auto_shutdown(void) {
 #ifndef _arch_sub_naomi
     fs_dclsocket_shutdown();
-    if(net_shutdown_weak)
-        (*net_shutdown_weak)();
+    KOS_INIT_FLAG_CALL(net_shutdown);
 #endif
 
     irq_disable();
@@ -219,9 +217,7 @@ void  __weak arch_auto_shutdown(void) {
     fs_dev_shutdown();
 #endif
     fs_ramdisk_shutdown();
-    if(fs_romdisk_shutdown_weak) {
-        fs_romdisk_shutdown_weak();
-    }
+    KOS_INIT_FLAG_CALL(fs_romdisk_shutdown);
     fs_pty_shutdown();
     fs_shutdown();
     thd_shutdown();

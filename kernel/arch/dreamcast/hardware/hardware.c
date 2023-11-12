@@ -5,7 +5,9 @@
    Copyright (C) 2013 Lawrence Sebald
 */
 
+#include <stdbool.h>
 #include <arch/arch.h>
+#include <kos/init.h>
 #include <dc/spu.h>
 #include <dc/video.h>
 #include <dc/cdrom.h>
@@ -40,8 +42,6 @@ int hardware_sys_init(void) {
     return 0;
 }
 
-void (*bba_la_init_weak)(void) __attribute__((weak));
-void (*bba_la_shutdown_weak)(void) __attribute__((weak));
 
 void bba_la_init(void) {
     /* Setup network (this won't do anything unless we enable netcore) */
@@ -53,6 +53,9 @@ void bba_la_shutdown(void) {
     la_shutdown();
     bba_shutdown();
 }
+
+KOS_INIT_FLAG_WEAK(bba_la_init, false);
+KOS_INIT_FLAG_WEAK(bba_la_shutdown, false);
 
 int hardware_periph_init(void) {
     /* Init sound */
@@ -71,8 +74,7 @@ int hardware_periph_init(void) {
     vid_init(DEFAULT_VID_MODE, DEFAULT_PIXEL_MODE);
 
 #ifndef _arch_sub_naomi
-    if(bba_la_init_weak)
-        (*bba_la_init_weak)();
+    KOS_INIT_FLAG_CALL(bba_la_init);
 #endif
 
     initted = 2;
@@ -84,8 +86,7 @@ void hardware_shutdown(void) {
     switch(initted) {
         case 2:
 #ifndef _arch_sub_naomi
-            if(bba_la_shutdown_weak)
-                (*bba_la_shutdown_weak)();
+            KOS_INIT_FLAG_CALL(bba_la_shutdown);
 #endif
             maple_shutdown();
 #if 0
