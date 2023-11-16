@@ -226,10 +226,16 @@ static void timer_getticks(uint32_t *secs, uint32_t *ticks, uint32_t div) {
     if(ticks) {
         assert(timer_ms_countdown > 0);
 
+        /* We have to do the elapsed time calculations as a 64-bit unsigned
+           integer, otherwise when using the fastest clock speed for timers,
+           this value will very quickly overflow mid-expression, before the
+           final division. */
         const uint64_t ticks64 = (timer_ms_countdown - TIMER32(tcnts[TMU2])) *
                                   tns[tcrs[TMU2] & (TPSC0 | TPSC1 | TPSC2)] /
                                   div;
 
+        /* Should NEVER overflow...
+           at least based on how KOS configures the timers. */
         assert(ticks64 <= UINT32_MAX);
 
         *ticks = ticks64;
