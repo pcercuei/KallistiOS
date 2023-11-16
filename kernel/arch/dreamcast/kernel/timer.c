@@ -7,7 +7,6 @@
 
 #include <assert.h>
 #include <stdio.h>
-#include <stdint.h>
 
 #include <arch/arch.h>
 #include <arch/timer.h>
@@ -210,7 +209,6 @@ void timer_ms_disable(void) {
     timer_disable_ints(TMU2);
 }
 
-/* Return the number of ticks since KOS was booted */
 static void timer_getticks(uint32_t *secs, uint32_t *ticks, uint32_t div) {
     int irq_status = irq_disable();
 
