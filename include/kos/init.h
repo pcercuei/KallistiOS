@@ -39,7 +39,7 @@ __BEGIN_DECLS
     \see    dreamcast_initflags
 */
 #define KOS_INIT_FLAGS(flags) \
-    uint32 __kos_init_flags = (flags); \
+    const uint32_t __kos_init_flags = (flags); \
     extern void arch_init_net(void); \
     void (*init_net_weak)(void) = ((flags) & INIT_NET) ? arch_init_net : NULL; \
     extern void net_shutdown(void); \
@@ -55,8 +55,9 @@ __BEGIN_DECLS
     extern void export_init(void); \
     void (*export_init_weak)(void) = ((flags) & INIT_EXPORT) ? export_init : NULL
 
-/** \brief  The init flags. Do not modify this directly! */
-extern uint32 __kos_init_flags;
+/** \cond */
+extern const uint32_t __kos_init_flags;
+/** \endcond */
 
 /** \brief  Deprecated and not useful anymore. */
 #define KOS_INIT_ROMDISK(rd) \
