@@ -196,10 +196,7 @@ static          uint32_t timer_ms_countdown;
 
 /* TMU2 interrupt handler, called every second. Simply updates our
    running second counter and clears the underflow flag. */
-static void timer_ms_handler(irq_t source, irq_context_t *context) {
-    (void)source;
-    (void)context;
-
+static void timer_ms_handler(irq_t, irq_context_t *, void *) {
     timer_ms_counter++;
 
     /* Clear overflow bit so we can check it when returning time */
@@ -207,7 +204,7 @@ static void timer_ms_handler(irq_t source, irq_context_t *context) {
 }
 
 void timer_ms_enable(void) {
-    irq_set_handler(EXC_TMU2_TUNI2, timer_ms_handler);
+    irq_set_handler(EXC_TMU2_TUNI2, timer_ms_handler, NULL);
     timer_prime(TMU2, 1, 1);
     timer_ms_countdown = timer_count(TMU2);
     timer_clear(TMU2);
@@ -339,9 +336,7 @@ static timer_primary_callback_t tp_callback;
 static uint32_t tp_ms_remaining;
 
 /* IRQ handler for the primary timer interrupt. */
-static void tp_handler(irq_t src, irq_context_t *cxt) {
-    (void)src;
-
+static void tp_handler(irq_t, irq_context_t *cxt, void *) {
     /* Are we at zero? */
     if(tp_ms_remaining == 0) {
         /* Disable any further timer events. The callback may
@@ -374,14 +369,14 @@ static void timer_primary_init(void) {
     tp_callback = NULL;
 
     /* Clear out TMU0 and get ready for wakeups */
-    irq_set_handler(EXC_TMU0_TUNI0, tp_handler);
+    irq_set_handler(EXC_TMU0_TUNI0, tp_handler, NULL);
     timer_clear(TMU0);
 }
 
 static void timer_primary_shutdown(void) {
     timer_stop(TMU0);
     timer_disable_ints(TMU0);
-    irq_set_handler(EXC_TMU0_TUNI0, NULL);
+    irq_set_handler(EXC_TMU0_TUNI0, NULL, NULL);
 }
 
 timer_primary_callback_t timer_primary_set_callback(timer_primary_callback_t cb) {

@@ -129,11 +129,9 @@ void asic_evt_set_handler(uint16_t code, asic_evt_handler hnd) {
 
 /* The ASIC event handler; this is called from the global IRQ handler
    to handle external IRQ 9. */
-static void handler_irq9(irq_t source, irq_context_t *context) {
+static void handler_irq9(irq_t, irq_context_t *, void *data) {
+    const asic_evt_handler (*const handlers)[ASIC_EVT_REG_HNDS] = data;
     uint8_t reg, i;
-
-    (void)source;
-    (void)context;
 
     /* Go through each event register and look for pending events */
     for(reg = 0; reg < ASIC_EVT_REGS; reg++) {
@@ -146,10 +144,8 @@ static void handler_irq9(irq_t source, irq_context_t *context) {
 
         /* Search for relevant handlers */
         for(i = 0; i < ASIC_EVT_REG_HNDS; i++) {
-            if(mask & (1 << i)) {
-                if(asic_evt_handlers[reg][i] != NULL) {
-                    asic_evt_handlers[reg][i]((reg << 8) | i);
-                }
+            if((mask & (1 << i)) && handlers[reg][i] != NULL) {
+                handlers[reg][i]((reg << 8) | i);
             }
         }
     }
@@ -206,9 +202,9 @@ static void asic_evt_init(void) {
     memset(asic_evt_handlers, 0, sizeof(asic_evt_handlers));
 
     /* Hook IRQ9,B,D */
-    irq_set_handler(EXC_IRQ9, handler_irq9);
-    irq_set_handler(EXC_IRQB, handler_irq9);
-    irq_set_handler(EXC_IRQD, handler_irq9);
+    irq_set_handler(EXC_IRQ9, handler_irq9, asic_evt_handlers);
+    irq_set_handler(EXC_IRQB, handler_irq9, asic_evt_handlers);
+    irq_set_handler(EXC_IRQD, handler_irq9, asic_evt_handlers);
 }
 
 /* Shutdown events */
@@ -217,9 +213,9 @@ static void asic_evt_shutdown(void) {
     asic_evt_disable_all();
 
     /* Unhook handlers */
-    irq_set_handler(EXC_IRQ9, NULL);
-    irq_set_handler(EXC_IRQB, NULL);
-    irq_set_handler(EXC_IRQD, NULL);
+    irq_set_handler(EXC_IRQ9, NULL, NULL);
+    irq_set_handler(EXC_IRQB, NULL, NULL);
+    irq_set_handler(EXC_IRQD, NULL, NULL);
 }
 
 /* Init routine */

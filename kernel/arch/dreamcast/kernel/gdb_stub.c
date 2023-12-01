@@ -912,25 +912,23 @@ static void flushDebugChannel(void) {
     }
 }
 
-static void handle_exception(irq_t code, irq_context_t *context) {
+static void handle_exception(irq_t code, irq_context_t *context, void *) {
     registers = (uint32 *)context;
     gdb_handle_exception(code);
 }
 
-static void handle_user_trapa(irq_t code, irq_context_t *context) {
-    (void)code;
+static void handle_user_trapa(irq_t, irq_context_t *context, void *) {
     registers = (uint32 *)context;
     gdb_handle_exception(EXC_TRAPA);
 }
 
-static void handle_gdb_trapa(irq_t code, irq_context_t *context) {
+static void handle_gdb_trapa(irq_t, irq_context_t *context, void *) {
     /*
     * trapa 0x20 indicates a software trap inserted in
     * place of code ... so back up PC by one
     * instruction, since this instruction will
     * later be replaced by its original one!
     */
-    (void)code;
     registers = (uint32 *)context;
     registers[PC] -= 2;
     gdb_handle_exception(EXC_TRAPA);
@@ -942,14 +940,14 @@ void gdb_init(void) {
     else
         scif_set_parameters(57600, 1);
 
-    irq_set_handler(EXC_ILLEGAL_INSTR, handle_exception);
-    irq_set_handler(EXC_SLOT_ILLEGAL_INSTR, handle_exception);
-    irq_set_handler(EXC_DATA_ADDRESS_READ, handle_exception);
-    irq_set_handler(EXC_DATA_ADDRESS_WRITE, handle_exception);
-    irq_set_handler(EXC_USER_BREAK_PRE, handle_exception);
+    irq_set_handler(EXC_ILLEGAL_INSTR, handle_exception, NULL);
+    irq_set_handler(EXC_SLOT_ILLEGAL_INSTR, handle_exception, NULL);
+    irq_set_handler(EXC_DATA_ADDRESS_READ, handle_exception, NULL);
+    irq_set_handler(EXC_DATA_ADDRESS_WRITE, handle_exception, NULL);
+    irq_set_handler(EXC_USER_BREAK_PRE, handle_exception, NULL);
 
-    trapa_set_handler(32, handle_gdb_trapa);
-    trapa_set_handler(255, handle_user_trapa);
+    trapa_set_handler(32, handle_gdb_trapa, NULL);
+    trapa_set_handler(255, handle_user_trapa, NULL);
 
     BREAKPOINT();
 }

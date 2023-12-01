@@ -746,10 +746,7 @@ void modemIntResetControlCode(void) {
    a flag to a non zero value, call a function, or both when a timer interrupt
    is generated until it's stopped. */
 
-static void modemIntrTimeoutCallback(irq_t source, irq_context_t *context) {
-    (void)source;
-    (void)context;
-
+static void modemIntrTimeoutCallback(irq_t, irq_context_t *, void *) {
     if(modemTimeoutCallbackFlag != NULL)
         *modemTimeoutCallbackFlag = 1;
 
@@ -770,7 +767,7 @@ void modemIntSetupTimeoutTimer(int bps, unsigned char *callbackFlag,
         *modemTimeoutCallbackFlag = 0;
 
     /* Modify TMU1 so that it can be used for a timeout */
-    irq_set_handler(EXC_TMU1_TUNI1, modemIntrTimeoutCallback);
+    irq_set_handler(EXC_TMU1_TUNI1, modemIntrTimeoutCallback, NULL);
     timer_prime(TMU1, bps, 1);
     timer_clear(TMU1);
 
@@ -800,7 +797,7 @@ void modemIntShutdownTimeoutTimer(void) {
     modemIntResetTimeoutTimer();
 
     if(modemInternalFlags & MODEM_INTERNAL_FLAG_TIMER_HANDLER_SET) {
-        irq_set_handler(EXC_TMU1_TUNI1, NULL);
+        irq_set_handler(EXC_TMU1_TUNI1, NULL, NULL);
         modemInternalFlags &= ~MODEM_INTERNAL_FLAG_TIMER_HANDLER_SET;
     }
 }

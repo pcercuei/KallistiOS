@@ -17,15 +17,21 @@
 #include <kos/thread.h>
 #include <kos/library.h>
 
+struct irq_cb {
+    irq_handler hdl;
+    void *data;
+};
+
 /* Exception table -- this table matches (EXPEVT>>4) to a function pointer.
    If the pointer is null, then nothing happens. Otherwise, the function will
    handle the exception. */
-static irq_handler irq_handlers[0x100];
-static irq_handler trapa_handlers[0x100];
+static struct irq_cb irq_handlers[0x100];
+static struct irq_cb trapa_handlers[0x100];
 
 /* Global exception handler -- hook this if you want to get each and every
    exception; you might get more than you bargained for, but it can be useful. */
 static irq_handler irq_hnd_global;
+static void *irq_hnd_global_data;
 
 /* Default IRQ context location */
 static irq_context_t irq_context_default;
@@ -37,12 +43,12 @@ int irq_inside_int(void) {
 }
 
 /* Set a handler, or remove a handler */
-int irq_set_handler(irq_t code, irq_handler hnd) {
+int irq_set_handler(irq_t code, irq_handler hnd, void *data) {
     /* Make sure they don't do something crackheaded */
     if(code >= 0x1000 || (code & 0x000f)) return -1;
 
     code = code >> 4;
-    irq_handlers[code] = hnd;
+    irq_handlers[code] = (struct irq_cb){ hnd, data };
 
     return 0;
 }
@@ -53,12 +59,13 @@ irq_handler irq_get_handler(irq_t code) {
     if(code >= 0x1000 || (code & 0x000f)) return NULL;
 
     code = code >> 4;
-    return irq_handlers[code];
+    return irq_handlers[code].hdl;
 }
 
 /* Set a global handler */
-int irq_set_global_handler(irq_handler hnd) {
+int irq_set_global_handler(irq_handler hnd, void *data) {
     irq_hnd_global = hnd;
+    irq_hnd_global_data = data;
     return 0;
 }
 
@@ -68,10 +75,10 @@ irq_handler irq_get_global_handler(void) {
 }
 
 /* Set or remove a trapa handler */
-int trapa_set_handler(irq_t code, irq_handler hnd) {
+int trapa_set_handler(irq_t code, irq_handler hnd, void *data) {
     if(code > 0xff) return -1;
 
-    trapa_handlers[code] = hnd;
+    trapa_handlers[code] = (struct irq_cb){ hnd, data };
 
     return 0;
 }
@@ -103,6 +110,7 @@ void irq_handle_exception(int code) {
     /* volatile uint32_t *tra = (uint32_t*)0xff000020; */
     volatile uint32_t *expevt = (uint32_t *)0xff000024;
     volatile uint32_t *intevt = (uint32_t *)0xff000028;
+    const struct irq_cb *hnd;
     uint32_t evt = 0;
     int handled = 0;
 
@@ -116,11 +124,9 @@ void irq_handle_exception(int code) {
     if(code == 3) evt = *intevt;
 
     if(inside_int) {
-        irq_handler hnd = irq_handlers[EXC_DOUBLE_FAULT >> 4];
-
-        if(hnd != NULL) {
-            hnd(EXC_DOUBLE_FAULT, irq_srt_addr);
-        }
+        hnd = &irq_handlers[EXC_DOUBLE_FAULT >> 4];
+        if(hnd->hdl != NULL)
+            hnd->hdl(EXC_DOUBLE_FAULT, irq_srt_addr, hnd->data);
         else
             irq_dump_regs(code, evt);
 
@@ -135,7 +141,7 @@ void irq_handle_exception(int code) {
 
     /* If there's a global handler, call it */
     if(irq_hnd_global) {
-        irq_hnd_global(evt, irq_srt_addr);
+        irq_hnd_global(evt, irq_srt_addr, irq_hnd_global_data);
         handled = 1;
     }
 
@@ -158,20 +164,17 @@ void irq_handle_exception(int code) {
 
     /* If there's a handler, call it */
     {
-        irq_handler hnd = irq_handlers[evt >> 4];
-
-        if(hnd != NULL) {
-            hnd(evt, irq_srt_addr);
+        hnd = &irq_handlers[evt >> 4];
+        if(hnd->hdl != NULL) {
+            hnd->hdl(evt, irq_srt_addr, hnd->data);
             handled = 1;
         }
     }
 
     if(!handled) {
-        irq_handler hnd = irq_handlers[EXC_UNHANDLED_EXC >> 4];
-
-        if(hnd != NULL) {
-            hnd(evt, irq_srt_addr);
-        }
+        hnd = &irq_handlers[EXC_UNHANDLED_EXC >> 4];
+        if(hnd->hdl != NULL)
+            hnd->hdl(evt, irq_srt_addr, hnd->data);
         else
             irq_dump_regs(code, evt);
 
@@ -184,22 +187,20 @@ void irq_handle_exception(int code) {
     inside_int = 0;
 }
 
-void irq_handle_trapa(irq_t code, irq_context_t *context) {
+void irq_handle_trapa(irq_t, irq_context_t *context, void *data) {
     /* Get the exception code */
     volatile uint32_t *tra = (uint32_t *)0xff000020;
-    irq_handler hnd;
+    const struct irq_cb *hnd, *handlers = data;
     uint32_t vec;
-
-    (void)code;
 
     /* Get the trapa vector */
     vec = (*tra) >> 2;
 
     /* Check for handler and call if present */
-    hnd = trapa_handlers[vec];
+    hnd = &handlers[vec];
 
-    if(hnd != NULL)
-        hnd(vec, context);
+    if(hnd->hdl != NULL)
+        hnd->hdl(vec, context, hnd->data);
 }
 
 
@@ -264,14 +265,11 @@ void irq_create_context(irq_context_t *context, uint32_t stkpntr,
 }
 
 /* Default timer handler (until threads can take over) */
-static void irq_def_timer(irq_t src, irq_context_t *context) {
-    (void)src;
-    (void)context;
+static void irq_def_timer(irq_t, irq_context_t *, void *) {
 }
 
 /* Default FPU exception handler (can't seem to turn these off) */
-static void irq_def_fpu(irq_t src, irq_context_t *context) {
-    (void)src;
+static void irq_def_fpu(irq_t, irq_context_t *context, void *) {
     context->pc += 2;
 }
 
@@ -296,18 +294,19 @@ int irq_init(void) {
     memset(irq_handlers, 0, sizeof(irq_handlers));
     memset(trapa_handlers, 0, sizeof(trapa_handlers));
     irq_hnd_global = NULL;
+    irq_hnd_global_data = NULL;
 
     /* Default to not in an interrupt */
     inside_int = 0;
 
     /* Set a default timer handler */
-    irq_set_handler(TIMER_IRQ, irq_def_timer);
+    irq_set_handler(TIMER_IRQ, irq_def_timer, NULL);
 
     /* Set a trapa handler */
-    irq_set_handler(EXC_TRAPA, irq_handle_trapa);
+    irq_set_handler(EXC_TRAPA, irq_handle_trapa, trapa_handlers);
 
     /* Set a default FPU exception handler */
-    irq_set_handler(EXC_FPU, irq_def_fpu);
+    irq_set_handler(EXC_FPU, irq_def_fpu, NULL);
 
     /* Set a default context (will be superseded if threads are
        enabled later) */
