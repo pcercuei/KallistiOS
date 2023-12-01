@@ -51,9 +51,10 @@ static uint32_t us_interval = 0;
 static uint32_t us_elapsed = 0;
 
 /* Interval timer mode interrupt handler */
-static void wdt_isr(irq_t src, irq_context_t *cxt) {
+static void wdt_isr(irq_t src, irq_context_t *cxt, void *data) {
     (void)src;
     (void)cxt;
+    (void)data;
 
     /* Update elapsed time */
     us_elapsed += WDT_INT_DEFAULT;
@@ -87,7 +88,7 @@ void wdt_enable_timer(uint8_t initial_count,
     us_interval = micro_seconds;
 
     /* Register our interrupt handler */
-    irq_set_handler(EXC_WDT_ITI, wdt_isr);
+    irq_set_handler(EXC_WDT_ITI, wdt_isr, NULL);
 
     /* Unmask the WDTIT interrupt, giving it a new priority */
     IPR(IPRB) = IPR(IPRB) | ((irq_prio & IPRB_WDT_MASK) << IPRB_WDT);
@@ -142,7 +143,7 @@ void wdt_disable(void) {
     IPR(IPRB) = IPR(IPRB) & ~(IPRB_WDT_MASK << IPRB_WDT);
 
     /* Unregister our interrupt handler */
-    irq_set_handler(EXC_WDT_ITI, NULL);
+    irq_set_handler(EXC_WDT_ITI, NULL, NULL);
 
     /* Reset the WDT counter */
     wdt_pet();

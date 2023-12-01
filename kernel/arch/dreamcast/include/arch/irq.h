@@ -274,7 +274,7 @@ typedef uint32_t irq_t;
     \param  source          The IRQ that caused the handler to be called.
     \param  context         The CPU's context.
 */
-typedef void (*irq_handler)(irq_t source, irq_context_t *context);
+typedef void (*irq_handler)(irq_t source, irq_context_t *context, void *data);
 
 /** \brief   Are we inside an interrupt handler?
     \ingroup irqs
@@ -301,11 +301,12 @@ void irq_force_return(void);
     \param  source          The IRQ type to set the handler for
                             (see \ref irq_exception_codes).
     \param  hnd             A pointer to a procedure to handle the exception.
+    \param  data            A pointer that will be passed along to the callback.
     
     \retval 0               On success.
     \retval -1              If the source is invalid.
 */
-int irq_set_handler(irq_t source, irq_handler hnd);
+int irq_set_handler(irq_t source, irq_handler hnd, void *data);
 
 /** \brief   Get the address of the current handler for the IRQ type.
     \ingroup irqs
@@ -321,11 +322,12 @@ irq_handler irq_get_handler(irq_t source);
     
     \param  code            The value passed to the trapa opcode.
     \param  hnd             A pointer to the procedure to handle the trap.
+    \param  data            A pointer that will be passed along to the callback.
 
     \retval 0               On success.
     \retval -1              If the code is invalid (greater than 0xFF).
 */
-int trapa_set_handler(irq_t code, irq_handler hnd);
+int trapa_set_handler(irq_t code, irq_handler hnd, void *data);
 
 /** \brief   Set a global exception handler.
     \ingroup irqs
@@ -337,10 +339,11 @@ int trapa_set_handler(irq_t code, irq_handler hnd);
                             these will stop the unhandled exception error.
 
     \param  hnd             A pointer to the procedure to handle the exception.
+    \param  data            A pointer that will be passed along to the callback.
 
     \retval 0               On success (no error conditions defined).
 */
-int irq_set_global_handler(irq_handler hnd);
+int irq_set_global_handler(irq_handler hnd, void *data);
 
 /** \brief   Get the global exception handler.
     \ingroup irqs

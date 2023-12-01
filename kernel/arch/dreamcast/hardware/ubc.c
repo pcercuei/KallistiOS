@@ -315,10 +315,11 @@ void ubc_clear_breakpoints(void) {
 }
 
 /* Entry-point for UBC-related interrupt handling. */
-static void handle_exception(irq_t code, irq_context_t *irq_ctx) {
+static void handle_exception(irq_t code, irq_context_t *irq_ctx, void *data) {
     bool serviced = false;
 
     (void)code;
+    (void)data;
 
     /* Check if channel B's condition is active. */
     if(BRCR & CMFB) {
@@ -386,8 +387,8 @@ void ubc_init(void) {
     ubc_wait();
 
     /* Install our exception handler for the UBC exception types. */
-    irq_set_handler(EXC_USER_BREAK_PRE, handle_exception);
-    irq_set_handler(EXC_USER_BREAK_POST, handle_exception);
+    irq_set_handler(EXC_USER_BREAK_PRE, handle_exception, NULL);
+    irq_set_handler(EXC_USER_BREAK_POST, handle_exception, NULL);
 }
 
 /* UBC shutdown routine called when exiting KOS. */
@@ -400,7 +401,7 @@ void ubc_shutdown(void) {
     ubc_wait();
 
     /* Uninstall our exception handler from the UBC exception types. */
-    irq_set_handler(EXC_USER_BREAK_PRE, NULL);
-    irq_set_handler(EXC_USER_BREAK_POST, NULL);
+    irq_set_handler(EXC_USER_BREAK_PRE, NULL, NULL);
+    irq_set_handler(EXC_USER_BREAK_POST, NULL, NULL);
 }
 
