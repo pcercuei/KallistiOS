@@ -6,6 +6,8 @@
 
 /* This module contains low-level handling for IRQs and related exceptions. */
 
+#include <stdbool.h>
+#include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
 #include <arch/arch.h>
@@ -14,12 +16,26 @@
 #include <arch/timer.h>
 #include <arch/stack.h>
 #include <kos/dbgio.h>
+#include <kos/genwait.h>
 #include <kos/thread.h>
 #include <kos/library.h>
 
 struct irq_cb {
     irq_handler hdl;
     void *data;
+};
+
+struct thirq_data {
+    irq_handler hdl;
+    irq_t source;
+    irq_context_t *ctx;
+    kthread_t *thd;
+    int genwait_obj;
+    void *data;
+    volatile bool quit;
+    volatile bool pending;
+    void (*ack_and_mask)(irq_t);
+    void (*unmask)(irq_t);
 };
 
 /* Exception table -- this table matches (EXPEVT>>4) to a function pointer.
@@ -72,6 +88,87 @@ int irq_set_global_handler(irq_handler hnd, void *data) {
 /* Get the global exception handler */
 irq_handler irq_get_global_handler(void) {
     return irq_hnd_global;
+}
+
+static void * irq_threaded_irq(void *data) {
+    struct thirq_data *thdata = data;
+
+    for (;;) {
+        if (!thdata->pending)
+            genwait_wait(&thdata->genwait_obj, "Threaded IRQ", 0, NULL);
+
+        if (thdata->quit)
+            break;
+
+        thdata->pending = false;
+        thdata->hdl(thdata->source, thdata->ctx, thdata->data);
+        thdata->unmask(thdata->source);
+    }
+
+    return NULL;
+}
+
+static void thirq_dispatch(irq_t source, irq_context_t *context, void *data) {
+    struct thirq_data *thdata = data;
+
+    thdata->ack_and_mask(source);
+
+    thdata->source = source;
+    thdata->ctx = context;
+
+    thdata->pending = true;
+    genwait_wake_one(&thdata->genwait_obj);
+}
+
+int irq_request_threaded_handler(irq_t code, irq_handler hnd, void *data,
+				 void (*ack_and_mask)(irq_t),
+				 void (*unmask)(irq_t)) {
+    struct thirq_data *thdata;
+    kthread_t *thd;
+
+    thdata = malloc(sizeof(*thdata));
+    if (!thdata)
+        return -1; /* TODO: What return code? */
+
+    thdata->hdl = hnd;
+    thdata->data = data;
+    thdata->quit = false;
+    thdata->pending = false;
+
+    /* TODO: We wouldn't need these callbacks if there was a fine-grained way
+     * to disable interrupts. */
+    thdata->ack_and_mask = ack_and_mask;
+    thdata->unmask = unmask;
+
+    thdata->thd = thd_create(0, irq_threaded_irq, thdata);
+    if (!thdata->thd)
+        return -1; /* TODO: What return code? */
+
+    code = code >> 4;
+    irq_handlers[code] = (struct irq_cb){ thirq_dispatch, thdata };
+
+    return 0;
+}
+
+int irq_remove_threaded_handler(irq_t code)
+{
+    struct irq_cb *cb;
+    struct thirq_data *thdata;
+
+    cb = &irq_handlers[code >> 4];
+    thdata = cb->data;
+
+    irq_handlers[code >> 4] = (struct irq_cb){ NULL, NULL };
+
+    if (thdata) {
+        thdata->quit = true;
+        genwait_wake_one(&thdata->genwait_obj);
+        thd_join(thdata->thd, NULL);
+
+        free(thdata);
+    }
+
+    return 0;
 }
 
 /* Set or remove a trapa handler */
