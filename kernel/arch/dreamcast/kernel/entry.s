@@ -42,7 +42,7 @@ _irq_save_regs:
 	add		#0x72,r0
 	sts.l		fpscr,@-r0	! save FPSCR 0xe0
 	mov.l		r15,@-r0	! save R15   0xdc
-	mov		#0x20,r2	! Set bit 21 to r2
+	mov		#0x30,r2	! Set bits 20/21 to r2
 	mov.l		r14,@-r0	! save R14   0xd8
 	shll16		r2		!
 	mov.l		r13,@-r0	! save R13   0xd4
@@ -59,42 +59,27 @@ _irq_save_regs:
 	stc.l		r2_bank,@-r0	! Save R2
 	stc.l		r1_bank,@-r0	! Save R1
 	stc.l		r0_bank,@-r0	! Save R0    0xa0
-	lds		r2,fpscr	! Reset FPSCR, switch to bank 2
+	lds		r2,fpscr	! Reset FPSCR, switch to bank 2, 64-bit I/O
 
-	fmov.s		fr15,@-r0	! save FR15  0x9c
-	fmov.s		fr14,@-r0	! save FR14
-	fmov.s		fr13,@-r0	! save FR13
-	fmov.s		fr12,@-r0	! save FR12
-	fmov.s		fr11,@-r0	! save FR11
-	fmov.s		fr10,@-r0	! save FR10
-	fmov.s		fr9,@-r0	! save FR9
-	fmov.s		fr8,@-r0	! save FR8
-	fmov.s		fr7,@-r0	! save FR7
-	fmov.s		fr6,@-r0	! save FR6
-	fmov.s		fr5,@-r0	! save FR5
-	fmov.s		fr4,@-r0	! save FR4
-	fmov.s		fr3,@-r0	! save FR3
-	fmov.s		fr2,@-r0	! save FR2
-	fmov.s		fr1,@-r0	! save FR1
-	fmov.s		fr0,@-r0	! save FR0   0x60
+	fmov		dr14,@-r0	! Save FR15/FR14  0x98
+	fmov		dr12,@-r0	! Save FR13/FR12
+	fmov		dr10,@-r0	! Save FR11/FR10
+	fmov		dr8,@-r0	! Save FR9/FR8
+	fmov		dr6,@-r0	! Save FR7/FR6
+	fmov		dr4,@-r0	! Save FR5/FR4
+	fmov		dr2,@-r0	! Save FR3/FR2
+	fmov		dr0,@-r0	! Save FR1/FR0    0x60
 	frchg				! Switch back to first bank
 
-	fmov.s		fr15,@-r0	! save FR15  0x5c
-	fmov.s		fr14,@-r0	! save FR14
-	fmov.s		fr13,@-r0	! save FR13
-	fmov.s		fr12,@-r0	! save FR12
-	fmov.s		fr11,@-r0	! save FR11
-	fmov.s		fr10,@-r0	! save FR10
-	fmov.s		fr9,@-r0	! save FR9
-	fmov.s		fr8,@-r0	! save FR8
-	fmov.s		fr7,@-r0	! save FR7
-	fmov.s		fr6,@-r0	! save FR6
-	fmov.s		fr5,@-r0	! save FR5
-	fmov.s		fr4,@-r0	! save FR4
-	fmov.s		fr3,@-r0	! save FR3
-	fmov.s		fr2,@-r0	! save FR2
-	fmov.s		fr1,@-r0	! save FR1
-	fmov.s		fr0,@-r0	! save FR0   0x20
+	fmov		dr14,@-r0	! Save FR15/FR14  0x58
+	fmov		dr12,@-r0	! Save FR13/FR12
+	fmov		dr10,@-r0	! Save FR11/FR10
+	fmov		dr8,@-r0	! Save FR9/FR8
+	fmov		dr6,@-r0	! Save FR7/FR6
+	fmov		dr4,@-r0	! Save FR5/FR4
+	fmov		dr2,@-r0	! Save FR3/FR2
+	fmov		dr0,@-r0	! Save FR1/FR0    0x20
+	fschg				! Restore 32-bit I/O
 
 	! Setup our kernel-mode stack
 	mov.l		stkaddr,r15
@@ -140,7 +125,7 @@ stkaddr:
 ! Now restore all the registers and jump back to the thread
 _save_regs_finish:
 	mov.l	_irq_srt_addr, r1	! Get register store address
-	mov	#0x0,r2
+	mov	#0x10,r2		! Set bit 20 to r2
 	ldc.l	@r1+,spc		! restore SPC 0x00
 	lds.l	@r1+,pr			! restore PR
 	ldc.l	@r1+,gbr		! restore GBR
@@ -150,42 +135,27 @@ _save_regs_finish:
 	lds.l	@r1+,macl		! restore MACL
 	ldc.l	@r1+,ssr		! restore SSR  0x18
 	lds.l	@r1+,fpul		! restore FPUL 0x1c
-	lds	r2,fpscr		! Reset FPSCR
+	shll16	r2
+	lds	r2,fpscr		! Reset FPSCR, 64-bit I/O
 
-	fmov.s	@r1+,fr0		! restore FR0  0x20
-	fmov.s	@r1+,fr1		! restore FR1
-	fmov.s	@r1+,fr2		! restore FR2
-	fmov.s	@r1+,fr3		! restore FR3
-	fmov.s	@r1+,fr4		! restore FR4
-	fmov.s	@r1+,fr5		! restore FR5
-	fmov.s	@r1+,fr6		! restore FR6
-	fmov.s	@r1+,fr7		! restore FR7
-	fmov.s	@r1+,fr8		! restore FR8
-	fmov.s	@r1+,fr9		! restore FR9
-	fmov.s	@r1+,fr10		! restore FR10
-	fmov.s	@r1+,fr11		! restore FR11
-	fmov.s	@r1+,fr12		! restore FR12
-	fmov.s	@r1+,fr13		! restore FR13
-	fmov.s	@r1+,fr14		! restore FR14
-	fmov.s	@r1+,fr15		! restore FR15  0x5c
+	fmov	@r1+,dr0		! restore FR0/FR1    0x20
+	fmov	@r1+,dr2		! restore FR2/FR3
+	fmov	@r1+,dr4		! restore FR4/FR5
+	fmov	@r1+,dr6		! restore FR6/FR7
+	fmov	@r1+,dr8		! restore FR8/FR9
+	fmov	@r1+,dr10		! restore FR10/FR11
+	fmov	@r1+,dr12		! restore FR12/FR13
+	fmov	@r1+,dr14		! restore FR14/FR15  0x58
 	frchg				! Second FP bank
 
-	fmov.s	@r1+,fr0		! restore FR0   0x60
-	fmov.s	@r1+,fr1		! restore FR1
-	fmov.s	@r1+,fr2		! restore FR2
-	fmov.s	@r1+,fr3		! restore FR3
-	fmov.s	@r1+,fr4		! restore FR4
-	fmov.s	@r1+,fr5		! restore FR5
-	fmov.s	@r1+,fr6		! restore FR6
-	fmov.s	@r1+,fr7		! restore FR7
-	fmov.s	@r1+,fr8		! restore FR8
-	fmov.s	@r1+,fr9		! restore FR9
-	fmov.s	@r1+,fr10		! restore FR10
-	fmov.s	@r1+,fr11		! restore FR11
-	fmov.s	@r1+,fr12		! restore FR12
-	fmov.s	@r1+,fr13		! restore FR13
-	fmov.s	@r1+,fr14		! restore FR14
-	fmov.s	@r1+,fr15		! restore FR15  0x9c
+	fmov	@r1+,dr0		! restore FR0/FR1    0x60
+	fmov	@r1+,dr2		! restore FR2/FR3
+	fmov	@r1+,dr4		! restore FR4/FR5
+	fmov	@r1+,dr6		! restore FR6/FR7
+	fmov	@r1+,dr8		! restore FR8/FR9
+	fmov	@r1+,dr10		! restore FR10/FR11
+	fmov	@r1+,dr12		! restore FR12/FR13
+	fmov	@r1+,dr14		! restore FR14/FR15  0x98
 
 	ldc.l	@r1+,r0_bank		! restore R0    0xa0
 	ldc.l	@r1+,r1_bank		! restore R1
