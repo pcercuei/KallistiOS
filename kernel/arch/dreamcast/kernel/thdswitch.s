@@ -46,7 +46,7 @@ _thd_block_now:
 
 	! Ok save the "permanent" GPRs
 	mov.l		r15,@-r4	! save R15   0xdc
-	mov		#0x20,r2	! Set bit 21 to r2
+	mov		#0x30,r2	! Set bits 20/21 to r2
 	mov.l		r14,@-r4	! save R14
 	shll16		r2
 	mov.l		r13,@-r4	! save R13
@@ -57,41 +57,27 @@ _thd_block_now:
 	mov.l		r8,@-r4		! save R8    0xc0
 	add		#-0x20,r4	! Skip R7-R0
 
-	lds		r2,fpscr	! Reset FPSCR, switch to bank 2
+	lds		r2,fpscr	! Reset FPSCR, switch to bank 2, 64-bit I/O
 
-	fmov.s		fr15,@-r4	! save FR15  0x9c
-	fmov.s		fr14,@-r4	! save FR14
-	fmov.s		fr13,@-r4	! save FR13
-	fmov.s		fr12,@-r4	! save FR12
-	fmov.s		fr11,@-r4	! save FR11
-	fmov.s		fr10,@-r4	! save FR10
-	fmov.s		fr9,@-r4	! save FR9
-	fmov.s		fr8,@-r4	! save FR8
-	fmov.s		fr7,@-r4	! save FR7
-	fmov.s		fr6,@-r4	! save FR6
-	fmov.s		fr5,@-r4	! save FR5
-	fmov.s		fr4,@-r4	! save FR4
-	fmov.s		fr3,@-r4	! save FR3
-	fmov.s		fr2,@-r4	! save FR2
-	fmov.s		fr1,@-r4	! save FR1
-	fmov.s		fr0,@-r4	! save FR0   0x60
+	fmov		dr14,@-r4	! Save FR15/FR14  0x98
+	fmov		dr12,@-r4	! Save FR13/FR12
+	fmov		dr10,@-r4	! Save FR11/FR10
+	fmov		dr8,@-r4	! Save FR9/FR8
+	fmov		dr6,@-r4	! Save FR7/FR6
+	fmov		dr4,@-r4	! Save FR5/FR4
+	fmov		dr2,@-r4	! Save FR3/FR2
+	fmov		dr0,@-r4	! Save FR1/FR0    0x60
 	frchg				! Switch back to first bank
-	fmov.s		fr15,@-r4	! save FR15  0x5c
-	fmov.s		fr14,@-r4	! save FR14
-	fmov.s		fr13,@-r4	! save FR13
-	fmov.s		fr12,@-r4	! save FR12
-	fmov.s		fr11,@-r4	! save FR11
-	fmov.s		fr10,@-r4	! save FR10
-	fmov.s		fr9,@-r4	! save FR9
-	fmov.s		fr8,@-r4	! save FR8
-	fmov.s		fr7,@-r4	! save FR7
-	fmov.s		fr6,@-r4	! save FR6
-	fmov.s		fr5,@-r4	! save FR5
-	fmov.s		fr4,@-r4	! save FR4
-	fmov.s		fr3,@-r4	! save FR3
-	fmov.s		fr2,@-r4	! save FR2
-	fmov.s		fr1,@-r4	! save FR1
-	fmov.s		fr0,@-r4	! save FR0   0x20
+
+	fmov		dr14,@-r4	! Save FR15/FR14  0x58
+	fmov		dr12,@-r4	! Save FR13/FR12
+	fmov		dr10,@-r4	! Save FR11/FR10
+	fmov		dr8,@-r4	! Save FR9/FR8
+	fmov		dr6,@-r4	! Save FR7/FR6
+	fmov		dr4,@-r4	! Save FR5/FR4
+	fmov		dr2,@-r4	! Save FR3/FR2
+	fmov		dr0,@-r4	! Save FR1/FR0    0x20
+	fschg				! Restore 32-bit I/O
 
 	! Save any machine words. We want the swapping-in of this task
 	! to simulate returning from this function, so what we'll do is
