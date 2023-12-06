@@ -37,12 +37,29 @@ _thd_block_now:
 	mov.l		idaddr,r0
 	jsr		@r0
 	nop
-	lds.l		@r15+,pr
 
+	lds.l		@r15+,pr
 	add		#0x72,r4
+
+	mov		r0,r1
 	add		#0x72,r4
 
 	sts.l		fpscr,@-r4	! save FPSCR 0xe0
+
+	mov		r4,r3
+	add		#-4,r3
+	mov		#0x7,r2
+
+1:
+	! Write a bogus value (r0) at each (i*0x20) offset of the irq context
+	! structure, using the movca.l opcode. This will pre-allocate cache
+	! blocks that covers the whole memory area, without fetching data
+	! from RAM, which means that the stores will then be as fast as they
+	! can be.
+	movca.l		r0,@r3
+	dt		r2
+	bf/s		1b
+	add		#-0x20,r3
 
 	! Ok save the "permanent" GPRs
 	mov.l		r15,@-r4	! save R15   0xdc
@@ -83,6 +100,7 @@ _thd_block_now:
 	! to simulate returning from this function, so what we'll do is
 	! put PR as PC. Everything else can stay the same.
 	sts.l		fpul,@-r4	! save FPUL 0x1c
+	mov		r1,r0
 	mov.l		r0,@-r4		! save SR
 	sts.l		macl,@-r4	! save MACL
 	sts.l		mach,@-r4	! save MACH

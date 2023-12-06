@@ -41,6 +41,22 @@ _irq_save_regs:
 	add		#0x72,r0	! Start at the top of the BANK regs
 	add		#0x72,r0
 	sts.l		fpscr,@-r0	! save FPSCR 0xe0
+
+	mov		r0,r1
+	add		#-4,r1
+	mov		#0x7,r2
+
+1:
+	! Write a bogus value (r0) at each (i*0x20) offset of the irq context
+	! structure, using the movca.l opcode. This will pre-allocate cache
+	! blocks that covers the whole memory area, without fetching data
+	! from RAM, which means that the stores will then be as fast as they
+	! can be.
+	movca.l		r0,@r1
+	dt		r2
+	bf/s		1b
+	add		#-0x20,r1
+
 	mov.l		r15,@-r0	! save R15   0xdc
 	mov		#0x30,r2	! Set bits 20/21 to r2
 	mov.l		r14,@-r0	! save R14   0xd8
