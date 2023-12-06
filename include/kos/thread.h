@@ -200,7 +200,7 @@ typedef struct kthread {
     /** \brief  Return value of the thread function.
         This is only used in joinable threads.  */
     void *rv;
-} kthread_t __attribute__((aligned(8)));
+} kthread_t __attribute__((aligned(32)));
 
 /** \name     Thread flag values
     \brief    kthread_t::flags values
