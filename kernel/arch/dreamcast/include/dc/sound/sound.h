@@ -75,10 +75,11 @@ uint32 snd_mem_available(void);
     within the memory space. There is generally not a good reason to do this in
     your own code, but the functionality is there if needed.
 
-    \param  reserve         The amount of memory to reserve as a base.
+    \param  addr            The ARM address where the buffer starts
+    \param  size            The size of the buffer in bytes
     \retval 0               On success (no failure conditions defined).
 */
-int snd_mem_init(uint32 reserve);
+int snd_mem_init(uint32 addr, unsigned int size);
 
 /** \brief  Shutdown the SPU RAM allocator.
 
