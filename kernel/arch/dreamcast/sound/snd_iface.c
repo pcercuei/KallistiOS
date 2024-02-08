@@ -13,6 +13,7 @@
 
 #include <kos/sem.h>
 #include <arch/timer.h>
+#include <dc/aram.h>
 #include <dc/g2bus.h>
 #include <dc/spu.h>
 #include <dc/sound/sound.h>
@@ -29,9 +30,13 @@ extern uint8_t snd_stream_drv_end[];
 /* Thread semaphore */
 static semaphore_t sem_qram;
 
+struct aica_header aica_header;
+
 /* Initialize driver; note that this replaces the AICA program so that
    if you had anything else going on, it's gone now! */
 int snd_init(void) {
+    aram_addr_t header_addr;
+    unsigned int i;
     int amt;
 
     /* Finish loading the stream driver */
@@ -46,12 +51,39 @@ int snd_init(void) {
         dbglog(DBG_DEBUG, "snd_init(): loading %d bytes into SPU RAM\n", amt);
         spu_memload_sq(0, snd_stream_drv, amt);
 
+        /* Clear header address so that we can detect it when it's set */
+        g2_fifo_wait();
+        aram_write_32(AICA_HEADER_ADDR, 0);
+
         /* Enable the AICA and give it a few ms to start up */
         spu_enable();
-        timer_spin_sleep(10);
 
-        /* Initialize the RAM allocator */
-        snd_mem_init(AICA_RAM_START, AICA_RAM_END - AICA_RAM_START);
+        for (i = 0; i < 100; i++) {
+            timer_spin_sleep(10);
+
+            /* Get the address of the firmware header */
+            header_addr = (aram_addr_t)aram_read_32(AICA_HEADER_ADDR);
+            if (header_addr != 0)
+                break;
+        }
+
+        if (header_addr == 0) {
+            dbglog(DBG_ERROR, "snd_init(): ARM firmware did not wake up\n");
+            spu_disable();
+            return -1;
+        }
+
+        dbglog(DBG_DEBUG, "snd_init(): Firmware header is at ARAM address 0x%lx\n",
+               header_addr);
+
+        /* Read the header */
+        aram_read(&aica_header, header_addr, sizeof(aica_header));
+
+        dbglog(DBG_DEBUG, "snd_init(): Samples buffer is at ARAM address 0x%lx, size 0x%x\n",
+               (aram_addr_t)aica_header.buffer, aica_header.buffer_size);
+
+        /* Initialize the RAM allocator for the sample buffer */
+        snd_mem_init((uint32)aica_header.buffer, aica_header.buffer_size);
 
         /* Setup semaphores */
         sem_init(&sem_qram, 1);
