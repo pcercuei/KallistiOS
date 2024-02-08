@@ -10,8 +10,6 @@
 #include <cmd_iface.h>
 #include "aica.h"
 
-extern volatile aica_channel_t *chans;
-
 void aica_init(void) {
     int i, j;
 
@@ -40,7 +38,7 @@ void aica_init(void) {
             else
                 logs[i] = 16.0 * log2(255.0 / i);
    */
-static uint8 logs[] = {
+static uint8_t logs[] = {
     255, 127, 111, 102, 95, 90, 86, 82, 79, 77, 74, 72, 70, 68, 66, 65,
     63, 62, 61, 59, 58, 57, 56, 55, 54, 53, 52, 51, 50, 50, 49, 48,
     47, 47, 46, 45, 45, 44, 43, 43, 42, 42, 41, 41, 40, 40, 39, 39,
@@ -59,11 +57,11 @@ static uint8 logs[] = {
     1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
 };
 
-static inline uint8 calc_aica_vol(uint8 x) {
+static inline uint8_t calc_aica_vol(uint8_t x) {
     return logs[x];
 }
 
-static inline int calc_aica_pan(int x) {
+static inline uint8_t calc_aica_pan(uint8_t x) {
     if(x == 0x80)
         return 0;
     else if(x < 0x80) {
@@ -90,19 +88,12 @@ static inline int calc_aica_pan(int x) {
 
    This routine (and the similar ones) owe a lot to Marcus' sound example --
    I hadn't gotten quite this far into dissecting the individual regs yet. */
-void aica_play(int ch, int delay) {
-    uint32 smpptr   = chans[ch].base;
-    uint32 mode     = chans[ch].type;
-    uint32 loopst   = chans[ch].loopstart;
-    uint32 loopend  = chans[ch].loopend;
-    uint32 freq     = chans[ch].freq;
-    uint32 vol      = chans[ch].vol;
-    uint32 pan      = chans[ch].pan;
-    uint32 loopflag = chans[ch].loop;
-
-    uint32 freq_lo, freq_base = 5644800;
+void aica_play(uint8_t ch, void *smpptr, uint32_t mode,
+               uint32_t loopst, uint32_t loopend, uint32_t freq,
+               uint8_t vol, uint8_t pan, uint32_t flags) {
+    uint32_t freq_lo, freq_base = 5644800;
     int freq_hi = 7;
-    uint32 playCont;
+    uint32_t playCont;
 
     /* Stop the channel (if it's already playing) */
     aica_stop(ch);
@@ -151,22 +142,19 @@ void aica_play(int ch, int delay) {
        0x0200 mask is set on reg 0, the sample loops infinitely. If
        it's not set, the sample plays once and terminates. We'll
        also set the bits to start playback here. */
-    CHNREG32(ch, 4) = smpptr & 0xffff;
-    playCont = (mode << 7) | (smpptr >> 16);
+    CHNREG32(ch, 4) = (uint32_t)smpptr & 0xffff;
+    playCont = (mode << 7) | ((uint32_t)smpptr >> 16);
 
-    if(loopflag)
+    if(flags & AICA_PLAY_LOOP)
         playCont |= 0x0200;
+    if(!(flags & AICA_PLAY_DELAY))
+        playCont |= 0xc000; /* key on */
 
-    if(delay) {
-        CHNREG32(ch, 0) = playCont;         /* key off */
-    }
-    else {
-        CHNREG32(ch, 0) = 0xc000 | playCont;    /* key on */
-    }
+    CHNREG32(ch, 0) = playCont;
 }
 
 /* Start sound on all channels specified by chmap bitmap */
-void aica_sync_play(uint32 chmap) {
+void aica_sync_play(uint64_t chmap) {
     int i = 0;
 
     while(chmap) {
@@ -179,7 +167,7 @@ void aica_sync_play(uint32 chmap) {
 }
 
 /* Stop the sound on a given channel */
-void aica_stop(int ch) {
+void aica_stop(uint8_t ch) {
     CHNREG32(ch, 0) = (CHNREG32(ch, 0) & ~0x4000) | 0x8000;
 }
 
@@ -188,19 +176,18 @@ void aica_stop(int ch) {
    can do things like vibrato and panning effects. */
 
 /* Set channel volume */
-void aica_vol(int ch) {
-    CHNREG8(ch, 41) = calc_aica_vol(chans[ch].vol);
+void aica_vol(uint8_t ch, uint8_t vol) {
+    CHNREG8(ch, 41) = calc_aica_vol(vol);
 }
 
 /* Set channel pan */
-void aica_pan(int ch) {
-    CHNREG8(ch, 36) = calc_aica_pan(chans[ch].pan);
+void aica_pan(uint8_t ch, uint8_t pan) {
+    CHNREG8(ch, 36) = calc_aica_pan(pan);
 }
 
 /* Set channel frequency */
-void aica_freq(int ch) {
-    uint32 freq = chans[ch].freq;
-    uint32 freq_lo, freq_base = 5644800;
+void aica_freq(uint8_t ch, uint32_t freq) {
+    uint32_t freq_lo, freq_base = 5644800;
     int freq_hi = 7;
 
     while(freq < freq_base && freq_hi > -8) {
@@ -213,7 +200,7 @@ void aica_freq(int ch) {
 }
 
 /* Get channel position */
-int aica_get_pos(int ch) {
+int aica_get_pos(uint8_t ch) {
     int i;
 
     /* Observe channel ch */
@@ -224,7 +211,5 @@ int aica_get_pos(int ch) {
         __asm__ volatile ("nop");  /* Prevent loop from being optimized out */
 
     /* Update position counters */
-    chans[ch].pos = SNDREG32(0x2814) & 0xffff;
-
-    return chans[ch].pos;
+    return SNDREG32(0x2814) & 0xffff;
 }
