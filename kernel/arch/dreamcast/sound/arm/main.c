@@ -59,7 +59,7 @@ void process_chn(struct aica_header *header, aica_cmd_t *pkt, aica_channel_t *ch
                 aica_sync_play(cmd_id);
             }
             else {
-                memcpy(chn, chndat, sizeof(aica_channel_t));
+                *chn = *chndat;
                 chn->pos = 0;
                 flags = 0;
 
