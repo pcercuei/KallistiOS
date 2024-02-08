@@ -31,7 +31,7 @@ void aica_init(void) {
 
 /* Translates a volume from linear form to logarithmic form (required by
    the AICA chip */
-static int logs[] = {
+static unsigned char logs[] = {
     0, 15, 22, 27, 31, 35, 39, 42, 45, 47, 50, 52, 55, 57, 59, 61,
     63, 65, 67, 69, 71, 73, 74, 76, 78, 79, 81, 82, 84, 85, 87, 88,
     90, 91, 92, 94, 95, 96, 98, 99, 100, 102, 103, 104, 105, 106,
