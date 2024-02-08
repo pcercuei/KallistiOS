@@ -54,7 +54,7 @@ int snd_init(void) {
         timer_spin_sleep(10);
 
         /* Initialize the RAM allocator */
-        snd_mem_init(AICA_RAM_START);
+        snd_mem_init(AICA_RAM_START, AICA_RAM_END - AICA_RAM_START);
     }
 
     initted = 1;

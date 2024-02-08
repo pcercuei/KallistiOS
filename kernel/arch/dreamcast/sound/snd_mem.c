@@ -66,7 +66,7 @@ static spinlock_t snd_mem_mutex = SPINLOCK_INITIALIZER;
 
 
 /* Reinitialize the pool with the given RAM base offset */
-int snd_mem_init(uint32 reserve) {
+int snd_mem_init(uint32 start, unsigned int size) {
     snd_block_t *blk;
 
     if(initted)
@@ -78,7 +78,10 @@ int snd_mem_init(uint32 reserve) {
     }
 
     // Make sure our base is 32-byte aligned
-    reserve = (reserve + 0x1f) & ~0x1f;
+    if (start & 0x1f) {
+        size -= 0x20 - (start & 0x1f);
+        start = (start + 0x1f) & ~0x1f;
+    }
 
     /* Make sure our tailq is initted */
     TAILQ_INIT(&pool);
@@ -92,8 +95,8 @@ int snd_mem_init(uint32 reserve) {
     }
 
     memset(blk, 0, sizeof(snd_block_t));
-    blk->addr = reserve;
-    blk->size = 2 * 1024 * 1024 - reserve;
+    blk->addr = start;
+    blk->size = size;
     blk->inuse = 0;
     TAILQ_INSERT_HEAD(&pool, blk, qent);
 
