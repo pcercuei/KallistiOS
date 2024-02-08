@@ -52,18 +52,6 @@ void timer_wait(uint32 jiffies) {
         ;
 }
 
-/****************** Tiny Libc ***************************************/
-
-void * memcpy(void *dest, const void *src, size_t count) {
-    unsigned char *tmp = (unsigned char *) dest;
-    unsigned char *s = (unsigned char *) src;
-
-    while(count--)
-        *tmp++ = *s++;
-
-    return dest;
-}
-
 /****************** Main Program ************************************/
 
 /* Our SH-4 interface (statically placed memory structures) */
@@ -85,7 +73,7 @@ void process_chn(struct aica_header *header, aica_cmd_t *pkt, aica_channel_t *ch
                 aica_sync_play(cmd_id);
             }
             else {
-                memcpy(chn, chndat, sizeof(aica_channel_t));
+                *chn = *chndat;
                 chn->pos = 0;
                 flags = 0;
 
