@@ -13,6 +13,34 @@
 #include "aica_cmd_iface.h"
 #include "aica.h"
 
+#include <stddef.h>
+
+extern unsigned char __heap_start, __heap_end;
+
+static char command_buffer[0x10000];
+static char response_buffer[0x10000];
+
+static struct aica_queue command_queue = {
+    .data = (uint32)command_buffer,
+    .size = sizeof(command_buffer),
+    .valid = 1,
+    .process_ok = 1,
+};
+
+static struct aica_queue response_queue = {
+    .data = (uint32)response_buffer,
+    .size = sizeof(response_buffer),
+    .valid = 1,
+    .process_ok = 1,
+};
+
+struct aica_header aica_header = {
+    .cmd_queue = &command_queue,
+    .resp_queue = &response_queue,
+    .channels = (struct aica_channel *)AICA_MEM_CHANNELS,
+    .buffer = &__heap_start,
+};
+
 /****************** Timer *******************************************/
 
 #define timer (*((volatile uint32 *)AICA_MEM_CLOCK))
@@ -25,8 +53,6 @@ void timer_wait(uint32 jiffies) {
 }
 
 /****************** Tiny Libc ***************************************/
-
-#include <stddef.h>
 
 void * memcpy(void *dest, const void *src, size_t count) {
     unsigned char *tmp = (unsigned char *) dest;
@@ -186,6 +212,12 @@ int arm_main(void) {
     q_resp->size = AICA_MEM_CHANNELS - q_resp->data;
     q_resp->process_ok = 1;
     q_resp->valid = 1;
+
+    aica_header.buffer_size =
+        (unsigned int)&__heap_end - (unsigned int)&__heap_start;
+
+    /* Set header pointer, so that the SH4 knows where the header is */
+    *(struct aica_header **)AICA_HEADER_ADDR = &aica_header;
 
     /* Initialize the AICA part of the SPU */
     aica_init();
