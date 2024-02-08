@@ -14,14 +14,20 @@
 #define CHNREG8A(chn, x) SNDREG8A(0x80*(chn) + (x))
 #define CHNREG8(chn, x) (*CHNREG8A(chn, x))
 
+/* flags for aica_play() */
+#define AICA_PLAY_DELAY 0x1
+#define AICA_PLAY_LOOP  0x2
+
 void aica_init(void);
-void aica_play(int ch, int delay);
-void aica_sync_play(uint32 chmap);
-void aica_stop(int ch);
-void aica_vol(int ch);
-void aica_pan(int ch);
-void aica_freq(int ch);
-int aica_get_pos(int ch);
+void aica_play(unsigned char ch, void *data, unsigned int mode,
+               unsigned int start, unsigned int end, unsigned int freq,
+               unsigned char vol, unsigned char pan, unsigned int flags);
+void aica_sync_play(unsigned long long chmap);
+void aica_stop(unsigned char ch);
+void aica_vol(unsigned char ch, unsigned char vol);
+void aica_pan(unsigned char ch, unsigned char pan);
+void aica_freq(unsigned char ch, unsigned int freq);
+int aica_get_pos(unsigned char ch);
 
 #endif  /* __AICA_H */
 

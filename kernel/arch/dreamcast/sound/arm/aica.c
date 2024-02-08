@@ -9,8 +9,6 @@
 #include <cmd_iface.h>
 #include "aica.h"
 
-extern volatile aica_channel_t *chans;
-
 void aica_init(void) {
     int i, j;
 
@@ -53,11 +51,11 @@ static int logs[] = {
     247, 247, 248, 248, 249, 249, 250, 250, 251, 251, 252, 252, 253, 254, 255
 };
 
-static inline int calc_aica_vol(int x) {
-    return 0xff - logs[x & 0xff];
+static inline unsigned char calc_aica_vol(unsigned char x) {
+    return 0xff - logs[x];
 }
 
-static inline int calc_aica_pan(int x) {
+static inline unsigned char calc_aica_pan(unsigned char x) {
     if(x == 0x80)
         return 0;
     else if(x < 0x80) {
@@ -84,16 +82,9 @@ static inline int calc_aica_pan(int x) {
 
    This routine (and the similar ones) owe a lot to Marcus' sound example --
    I hadn't gotten quite this far into dissecting the individual regs yet. */
-void aica_play(int ch, int delay) {
-    uint32 smpptr   = chans[ch].base;
-    uint32 mode     = chans[ch].type;
-    uint32 loopst   = chans[ch].loopstart;
-    uint32 loopend  = chans[ch].loopend;
-    uint32 freq     = chans[ch].freq;
-    uint32 vol      = chans[ch].vol;
-    uint32 pan      = chans[ch].pan;
-    uint32 loopflag = chans[ch].loop;
-
+void aica_play(unsigned char ch, void *smpptr, unsigned int mode,
+               unsigned int loopst, unsigned int loopend, unsigned int freq,
+               unsigned char vol, unsigned char pan, unsigned int flags) {
     uint32 freq_lo, freq_base = 5644800;
     int freq_hi = 7;
     uint32 playCont;
@@ -145,22 +136,19 @@ void aica_play(int ch, int delay) {
        0x0200 mask is set on reg 0, the sample loops infinitely. If
        it's not set, the sample plays once and terminates. We'll
        also set the bits to start playback here. */
-    CHNREG32(ch, 4) = smpptr & 0xffff;
-    playCont = (mode << 7) | (smpptr >> 16);
+    CHNREG32(ch, 4) = (unsigned int)smpptr & 0xffff;
+    playCont = (mode << 7) | ((unsigned int)smpptr >> 16);
 
-    if(loopflag)
+    if(flags & AICA_PLAY_LOOP)
         playCont |= 0x0200;
+    if(!(flags & AICA_PLAY_DELAY))
+        playCont |= 0xc000; /* key on */
 
-    if(delay) {
-        CHNREG32(ch, 0) = playCont;         /* key off */
-    }
-    else {
-        CHNREG32(ch, 0) = 0xc000 | playCont;    /* key on */
-    }
+    CHNREG32(ch, 0) = playCont;
 }
 
 /* Start sound on all channels specified by chmap bitmap */
-void aica_sync_play(uint32 chmap) {
+void aica_sync_play(unsigned long long chmap) {
     int i = 0;
 
     while(chmap) {
@@ -173,7 +161,7 @@ void aica_sync_play(uint32 chmap) {
 }
 
 /* Stop the sound on a given channel */
-void aica_stop(int ch) {
+void aica_stop(unsigned char ch) {
     CHNREG32(ch, 0) = (CHNREG32(ch, 0) & ~0x4000) | 0x8000;
 }
 
@@ -182,18 +170,17 @@ void aica_stop(int ch) {
    can do things like vibrato and panning effects. */
 
 /* Set channel volume */
-void aica_vol(int ch) {
-    CHNREG8(ch, 41) = calc_aica_vol(chans[ch].vol);
+void aica_vol(unsigned char ch, unsigned char vol) {
+    CHNREG8(ch, 41) = calc_aica_vol(vol);
 }
 
 /* Set channel pan */
-void aica_pan(int ch) {
-    CHNREG8(ch, 36) = calc_aica_pan(chans[ch].pan);
+void aica_pan(unsigned char ch, unsigned char pan) {
+    CHNREG8(ch, 36) = calc_aica_pan(pan);
 }
 
 /* Set channel frequency */
-void aica_freq(int ch) {
-    uint32 freq = chans[ch].freq;
+void aica_freq(unsigned char ch, unsigned int freq) {
     uint32 freq_lo, freq_base = 5644800;
     int freq_hi = 7;
 
@@ -207,7 +194,7 @@ void aica_freq(int ch) {
 }
 
 /* Get channel position */
-int aica_get_pos(int ch) {
+int aica_get_pos(unsigned char ch) {
     int i;
 
     /* Observe channel ch */
@@ -218,7 +205,5 @@ int aica_get_pos(int ch) {
         __asm__ volatile ("nop");  /* Prevent loop from being optimized out */
 
     /* Update position counters */
-    chans[ch].pos = SNDREG32(0x2814) & 0xffff;
-
-    return chans[ch].pos;
+    return SNDREG32(0x2814) & 0xffff;
 }
