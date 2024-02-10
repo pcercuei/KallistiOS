@@ -16,6 +16,7 @@
 #include <stddef.h>
 
 extern unsigned char __heap_start, __heap_end;
+extern volatile unsigned int timer;
 
 static char command_buffer[0x10000];
 static char response_buffer[0x10000];
@@ -43,8 +44,6 @@ struct aica_header aica_header = {
 };
 
 /****************** Timer *******************************************/
-
-#define timer (*((volatile uint32 *)AICA_MEM_CLOCK))
 
 void timer_wait(uint32 jiffies) {
     uint32 fin = timer + jiffies;
