@@ -8,6 +8,7 @@ extern unsigned char __heap_start, __heap_end;
 
 static char command_buffer[0x10000];
 static char response_buffer[0x10000];
+static struct aica_channel channels[64];
 
 static struct aica_queue command_queue = {
     .data = (uint32)command_buffer,
@@ -26,7 +27,7 @@ static struct aica_queue response_queue = {
 struct aica_header aica_header = {
     .cmd_queue = &command_queue,
     .resp_queue = &response_queue,
-    .channels = (struct aica_channel *)AICA_MEM_CHANNELS,
+    .channels = channels,
     .buffer = &__heap_start,
 };
 
