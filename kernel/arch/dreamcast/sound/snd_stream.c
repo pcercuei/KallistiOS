@@ -19,6 +19,7 @@
 #include <kos/mutex.h>
 #include <arch/cache.h>
 #include <arch/timer.h>
+#include <dc/aram.h>
 #include <dc/g2bus.h>
 #include <dc/sq.h>
 #include <dc/spu.h>
@@ -652,14 +653,15 @@ int snd_stream_poll(snd_stream_hnd_t hnd) {
     }
 
     /* Get channels position */
-    ch0pos = g2_read_32(SPU_RAM_UNCACHED_BASE +
-                        AICA_CHANNEL(stream->ch[0]) +
-                        offsetof(aica_channel_t, pos));
+    ch0pos = aram_read_32((aram_addr_t)aica_header.channels
+                          + stream->ch[0] * sizeof(*aica_header.channels)
+                          + offsetof(aica_channel_t, pos));
 
     if(stream->channels == 2) {
-        ch1pos = g2_read_32(SPU_RAM_UNCACHED_BASE +
-                    AICA_CHANNEL(stream->ch[1]) +
-                    offsetof(aica_channel_t, pos));
+        ch1pos = aram_read_32((aram_addr_t)aica_header.channels
+                              + stream->ch[1] * sizeof(*aica_header.channels)
+                              + offsetof(aica_channel_t, pos));
+
         /* The channel position register is 16-bit on AICA side, keep it in mind */
         current_play_pos = (ch0pos < ch1pos ? ch0pos : ch1pos) & 0xffff;
     }
