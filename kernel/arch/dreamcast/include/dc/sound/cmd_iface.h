@@ -24,32 +24,6 @@ extern struct aica_header aica_header;
 
 /* This is where our SH-4/AICA comm variables go... */
 
-/* 0x000000 - 0x010000 are reserved for the program */
-
-/* Location of the SH-4 to AICA queue; commands from here will be
-   periodically processed by the AICA and then removed from the queue. */
-#define AICA_MEM_CMD_QUEUE  0x010000    /* 32K */
-
-/* Location of the AICA to SH-4 queue; commands from here will be
-   periodically processed by the SH-4 and then removed from the queue. */
-#define AICA_MEM_RESP_QUEUE 0x018000    /* 32K */
-
-/* This is the channel base, which holds status structs for all the
-   channels. This is READ-ONLY from the SH-4 side. */
-#define AICA_MEM_CHANNELS   0x020000    /* 64 * 16*4 = 4K */
-
-/* The clock value (in milliseconds) */
-#define AICA_MEM_CLOCK      0x021000    /* 4 bytes */
-
-/* 0x021004 - 0x030000 are reserved for future expansion */
-
-/* Open ram for sample data */
-#define AICA_RAM_START      0x030000
-#define AICA_RAM_END        0x200000
-
-/* Quick access to the AICA channels */
-#define AICA_CHANNEL(x)     (AICA_MEM_CHANNELS + (x) * sizeof(aica_channel_t))
-
 /* The address of the firmware header will be placed at that address */
 #define AICA_HEADER_ADDR    0x1ffffc
 
