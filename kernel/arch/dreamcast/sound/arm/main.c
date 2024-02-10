@@ -19,6 +19,7 @@ extern unsigned char __heap_start, __heap_end;
 
 static char command_buffer[0x10000];
 static char response_buffer[0x10000];
+static struct aica_channel channels[64];
 
 static struct aica_queue command_queue = {
     .data = (uint32)command_buffer,
@@ -37,7 +38,7 @@ static struct aica_queue response_queue = {
 struct aica_header aica_header = {
     .cmd_queue = &command_queue,
     .resp_queue = &response_queue,
-    .channels = (struct aica_channel *)AICA_MEM_CHANNELS,
+    .channels = channels,
     .buffer = &__heap_start,
 };
 
@@ -53,10 +54,6 @@ void timer_wait(uint32 jiffies) {
 }
 
 /****************** Main Program ************************************/
-
-/* Our SH-4 interface (statically placed memory structures) */
-volatile aica_queue_t   *q_cmd = (volatile aica_queue_t *)AICA_MEM_CMD_QUEUE;
-volatile aica_queue_t   *q_resp = (volatile aica_queue_t *)AICA_MEM_RESP_QUEUE;
 
 /* Process a CHAN command */
 void process_chn(struct aica_header *header, aica_cmd_t *pkt, aica_channel_t *chndat) {
@@ -117,6 +114,7 @@ void process_chn(struct aica_header *header, aica_cmd_t *pkt, aica_channel_t *ch
 
 /* Process one packet of queue data */
 uint32 process_one(struct aica_header *header, uint32 tail) {
+    volatile struct aica_queue *q_cmd = header->cmd_queue;
     uint32      pktdata[AICA_CMD_MAX_SIZE], *pdptr, size, i;
     volatile uint32 * src;
     aica_cmd_t  * pkt;
@@ -164,6 +162,7 @@ uint32 process_one(struct aica_header *header, uint32 tail) {
 /* Look for an available request in the command queue; if one is there
    then process it and move the tail pointer. */
 void process_cmd_queue(struct aica_header *header) {
+    volatile struct aica_queue *q_cmd = header->cmd_queue;
     uint32      head, tail, tsloc, ts;
 
     /* Grab these values up front in case SH-4 changes head */
@@ -198,20 +197,9 @@ void process_cmd_queue(struct aica_header *header) {
 }
 
 int arm_main(void) {
+    volatile struct aica_queue *q_cmd = aica_header.cmd_queue;
+
     int i;
-
-    /* Setup our queues */
-    q_cmd->head = q_cmd->tail = 0;
-    q_cmd->data = AICA_MEM_CMD_QUEUE + sizeof(aica_queue_t);
-    q_cmd->size = AICA_MEM_RESP_QUEUE - q_cmd->data;
-    q_cmd->process_ok = 1;
-    q_cmd->valid = 1;
-
-    q_resp->head = q_resp->tail = 0;
-    q_resp->data = AICA_MEM_RESP_QUEUE + sizeof(aica_queue_t);
-    q_resp->size = AICA_MEM_CHANNELS - q_resp->data;
-    q_resp->process_ok = 1;
-    q_resp->valid = 1;
 
     aica_header.buffer_size =
         (unsigned int)&__heap_end - (unsigned int)&__heap_start;
