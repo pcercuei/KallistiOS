@@ -105,18 +105,21 @@ void snd_shutdown(void) {
 
 /* Submit a request to the SH4->AICA queue; size is in uint32's */
 int snd_sh4_to_aica(void *packet, uint32_t size) {
-    uint32_t  qa, bot, start, top, *pkt32, cnt;
+    uint32_t  *pkt32, cnt;
+    aram_addr_t start, top;
+    aica_queue_t cmd_queue;
+
     assert_msg(size < 256, "SH4->AICA packets may not be >256 uint32's long");
 
     sem_wait(&sem_qram);
 
-    /* Set these up for reference */
-    qa = SPU_RAM_UNCACHED_BASE + AICA_MEM_CMD_QUEUE;
-    assert_msg(g2_read_32(qa + offsetof(aica_queue_t, valid)), "Queue is not yet valid");
+    /* Read the command queue's structure */
+    aram_read(&cmd_queue, (aram_addr_t)aica_header.cmd_queue, sizeof(cmd_queue));
 
-    bot = SPU_RAM_UNCACHED_BASE + g2_read_32(qa + offsetof(aica_queue_t, data));
-    top = bot + g2_read_32(qa + offsetof(aica_queue_t, size));
-    start = bot + g2_read_32(qa + offsetof(aica_queue_t, head));
+    assert_msg(cmd_queue.valid, "Queue is not yet valid");
+
+    top = (aram_addr_t)(cmd_queue.data + cmd_queue.size);
+    start = (aram_addr_t)(cmd_queue.data + cmd_queue.head);
     pkt32 = (uint32 *)packet;
     cnt = 0;
 
@@ -128,20 +131,21 @@ int snd_sh4_to_aica(void *packet, uint32_t size) {
         cnt++;
 
         /* Write the next dword */
-        g2_write_32(start, *pkt32++);
+        aram_write_32(start, *pkt32++);
 
         /* Move our counters */
         start += 4;
 
         if(start >= top)
-            start = bot;
+            start = cmd_queue.data;
 
         size--;
     }
 
     /* Finally, write a new head value to signify that we've added
        a packet for it to process */
-    g2_write_32(qa + offsetof(aica_queue_t, head), start - bot);
+    aram_write_32((aram_addr_t)aica_header.cmd_queue + offsetof(aica_queue_t, head),
+                  start - cmd_queue.data);
 
     /* We could wait until head == tail here for processing, but there's
        not really much point; it'll just slow things down. */
@@ -153,12 +157,12 @@ int snd_sh4_to_aica(void *packet, uint32_t size) {
 
 /* Start processing requests in the queue */
 void snd_sh4_to_aica_start(void) {
-    g2_write_32(SPU_RAM_UNCACHED_BASE + AICA_MEM_CMD_QUEUE + offsetof(aica_queue_t, process_ok), 1);
+    aram_write_32((aram_addr_t)aica_header.cmd_queue + offsetof(aica_queue_t, process_ok), 1);
 }
 
 /* Stop processing requests in the queue */
 void snd_sh4_to_aica_stop(void) {
-    g2_write_32(SPU_RAM_UNCACHED_BASE + AICA_MEM_CMD_QUEUE + offsetof(aica_queue_t, process_ok), 0);
+    aram_write_32((aram_addr_t)aica_header.cmd_queue + offsetof(aica_queue_t, process_ok), 0);
 }
 
 /* Transfer one packet of data from the AICA->SH4 queue. Expects to
@@ -166,19 +170,22 @@ void snd_sh4_to_aica_stop(void) {
    if failure, 0 for no packets available, 1 otherwise. Failure
    might mean a permanent failure since the queue is probably out of sync. */
 int snd_aica_to_sh4(void *packetout) {
-    uint32  bot, start, stop, top, size, cnt, *pkt32;
+    uint32 size, cnt, *pkt32;
+    aram_addr_t top, start, stop;
+    aica_queue_t resp_queue;
 
     sem_wait(&sem_qram);
 
-    /* Set these up for reference */
-    bot = SPU_RAM_UNCACHED_BASE + AICA_MEM_RESP_QUEUE;
-    assert_msg(g2_read_32(bot + offsetof(aica_queue_t, valid)), "Queue is not yet valid");
+    /* Read the response queue's structure */
+    aram_read(&resp_queue, (aram_addr_t)aica_header.resp_queue, sizeof(resp_queue));
 
-    top = SPU_RAM_UNCACHED_BASE + AICA_MEM_RESP_QUEUE + g2_read_32(bot + offsetof(aica_queue_t, size));
-    start = SPU_RAM_UNCACHED_BASE + AICA_MEM_RESP_QUEUE + g2_read_32(bot + offsetof(aica_queue_t, tail));
-    stop = SPU_RAM_UNCACHED_BASE + AICA_MEM_RESP_QUEUE + g2_read_32(bot + offsetof(aica_queue_t, head));
-    cnt = 0;
+    assert_msg(resp_queue.valid, "Queue is not yet valid");
+
+    top = resp_queue.data + resp_queue.size;
+    start = resp_queue.data + resp_queue.tail;
+    stop = resp_queue.data + resp_queue.head;
     pkt32 = (uint32 *)packetout;
+    cnt = 0;
 
     /* Is there anything? */
     if(start == stop) {
@@ -187,7 +194,7 @@ int snd_aica_to_sh4(void *packetout) {
     }
 
     /* Check for packet size overflow */
-    size = g2_read_32(start + offsetof(aica_cmd_t, size));
+    size = aram_read_32(start + offsetof(aica_cmd_t, size));
 
     if(cnt >= AICA_CMD_MAX_SIZE) {
         sem_signal(&sem_qram);
@@ -199,7 +206,7 @@ int snd_aica_to_sh4(void *packetout) {
     stop = start + size * 4;
 
     if(stop > top)
-        stop -= top - (SPU_RAM_UNCACHED_BASE + AICA_MEM_RESP_QUEUE);
+        stop -= top;
 
     while(start != stop) {
         /* Fifo wait if necessary */
@@ -209,19 +216,20 @@ int snd_aica_to_sh4(void *packetout) {
         cnt++;
 
         /* Read the next dword */
-        *pkt32++ = g2_read_32(start);
+        *pkt32++ = aram_read_32(start);
 
         /* Move our counters */
         start += 4;
 
         if(start >= top)
-            start = bot;
+            start = resp_queue.data;
 
         cnt++;
     }
 
     /* Finally, write a new tail value to signify that we've removed a packet */
-    g2_write_32(bot + offsetof(aica_queue_t, tail), start - (SPU_RAM_UNCACHED_BASE + AICA_MEM_RESP_QUEUE));
+    aram_write_32((aram_addr_t)aica_header.resp_queue + offsetof(aica_queue_t, tail),
+                  start - resp_queue.data);
 
     sem_signal(&sem_qram);
 
