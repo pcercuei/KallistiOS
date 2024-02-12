@@ -315,7 +315,8 @@ void ubc_clear_breakpoints(void) {
 }
 
 /* Entry-point for UBC-related interrupt handling. */
-static void handle_exception(irq_t, irq_context_t *irq_ctx, void *) {
+static void handle_exception(irq_t, irq_context_t *irq_ctx, void *d) {
+    struct ubc_channel_state *state = d;
     bool serviced = false;
 
     /* Check if channel B's condition is active. */
@@ -323,11 +324,11 @@ static void handle_exception(irq_t, irq_context_t *irq_ctx, void *) {
         bool disable = false;
 
         /* Invoke the user's callback if there is one. */
-        if(channel_state[ubc_channel_b].cb)
-            disable = channel_state[ubc_channel_b].cb(
-                            channel_state[ubc_channel_b].bp,
+        if(state[ubc_channel_b].cb)
+            disable = state[ubc_channel_b].cb(
+                            state[ubc_channel_b].bp,
                             irq_ctx,
-                            channel_state[ubc_channel_b].ud);
+                            state[ubc_channel_b].ud);
 
         /* Check whether the breakpoint should disable itself. */
         if(disable) {
@@ -384,8 +385,8 @@ void ubc_init(void) {
     ubc_wait();
 
     /* Install our exception handler for the UBC exception types. */
-    irq_set_handler(EXC_USER_BREAK_PRE, handle_exception, NULL);
-    irq_set_handler(EXC_USER_BREAK_POST, handle_exception, NULL);
+    irq_set_handler(EXC_USER_BREAK_PRE, handle_exception, channel_state);
+    irq_set_handler(EXC_USER_BREAK_POST, handle_exception, channel_state);
 }
 
 /* UBC shutdown routine called when exiting KOS. */
