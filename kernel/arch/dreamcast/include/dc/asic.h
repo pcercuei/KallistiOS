@@ -200,6 +200,29 @@ typedef void (*asic_evt_handler)(uint32_t code, void *data);
 */
 void asic_evt_set_handler(uint16_t code, asic_evt_handler handler, void *data);
 
+/** \brief   Register a threaded handler with the given ASIC event.
+    \ingroup asic
+
+    This function will spawn a thread, that will sleep until notified when an
+    event happens. It will then call the handler. As the handler is not called
+    in an interrupt context, it can hold locks, and even sleep.
+
+    \param  code            The ASIC event code to hook (see \ref asic_events).
+    \param  handler         The function to call when the event happens.
+    \param  data            A user pointer that will be passed to the callback.
+    \param  ack_and_mask    An optional function that will be called by the real
+                            interrupt handler, to acknowledge and mask the
+                            interrupt, so that it won't trigger again while the
+                            threaded handler is running.
+    \param  unmask          An optional function that will be called by the
+                            thread after the handler function returned, to
+                            re-enable the interrupt.
+*/
+int asic_evt_request_threaded_handler(uint16_t code, asic_evt_handler handler,
+                                      void *data,
+                                      void (*ack_and_mask)(uint16_t),
+                                      void (*unmask)(uint16_t));
+
 /** \brief   Unregister any handler set to the given ASIC event.
     \ingroup asic
 
