@@ -1,5 +1,5 @@
 TARGET = libaicaos.a
-OBJS = aica.o crt0.o irq.o lock.o main.o queue.o task.o task_asm.o
+OBJS = aica.o crt0.o irq.o lock.o main.o printf.o queue.o task.o task_asm.o
 
 CC = $(DC_ARM_CC)
 AS = $(DC_ARM_AS)
