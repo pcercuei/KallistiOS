@@ -14,10 +14,16 @@
 #include <kos/sem.h>
 #include <arch/timer.h>
 #include <dc/aram.h>
+#include <dc/asic.h>
 #include <dc/g2bus.h>
 #include <dc/spu.h>
 #include <dc/sound/cmd_iface.h>
+#include <dc/sound/registers.h>
 #include <dc/sound/sound.h>
+
+
+/* Forward declarations */
+static int snd_from_aica(struct aica_header *header, void *packetout);
 
 /* Are we initted? */
 static int initted = 0;
@@ -31,16 +37,66 @@ static semaphore_t sem_qram;
 
 struct aica_header aica_header;
 
+static void snd_callback(uint32_t source, void *data)
+{
+    struct aica_header *header = data;
+    uint32_t pkt[AICA_CMD_MAX_SIZE];
+    aica_cmd_t *pktcmd = (aica_cmd_t *)pkt;
+    uint32_t str_addr, size;
+    char buf[256];
+    int ret;
+
+    (void)source;
+
+    for (;;) {
+        ret = snd_from_aica(header, pkt);
+        if (ret < 1)
+            return;
+
+        switch (pktcmd->cmd) {
+        default:
+            dbglog(DBG_DEBUG, "Unhandled command from ARM: %lu\n",
+                   pktcmd->cmd);
+            break;
+        }
+    }
+}
+
+static void snd_ack_arm_irq(uint16_t source)
+{
+    (void)source;
+
+    g2_write_32(REG_SPU_SH4_INT_RESET, SPU_INT_ENABLE_SH4);
+}
+
 /* Initialize driver; note that this replaces the AICA program so that
    if you had anything else going on, it's gone now! */
 int snd_init(void) {
     aram_addr_t header_addr;
+    int amt, ret, flags;
     unsigned int i;
-    int amt;
 
     /* Finish loading the stream driver */
     if(!initted) {
         spu_disable();
+        asic_evt_disable(ASIC_EVT_SPU_IRQ, ASIC_IRQ9);
+
+        /* Even with the asic_evt_disable() above, the ARM is still able to send
+           interrupts; so we need to disable them completely. */
+        flags = irq_disable();
+
+        /* Cancel any pending interrupt from the ARM */
+        snd_ack_arm_irq(0);
+
+        /* Register a handler for the interrupt */
+        ret = asic_evt_request_threaded_handler(ASIC_EVT_SPU_IRQ, snd_callback,
+                                                &aica_header, snd_ack_arm_irq,
+                                                NULL);
+        if (ret < 0) {
+            dbglog(DBG_ERROR, "snd_init(): unable to request threaded interrupt\n");
+            spu_disable();
+            return ret;
+        }
 
         amt = (snd_stream_drv_end - snd_stream_drv + 3) & ~3;
 
@@ -83,6 +139,9 @@ int snd_init(void) {
 
         /* Setup semaphores */
         sem_init(&sem_qram, 1);
+
+        asic_evt_enable(ASIC_EVT_SPU_IRQ, ASIC_IRQ9);
+        irq_restore(flags);
     }
 
     initted = 1;
@@ -94,6 +153,10 @@ int snd_init(void) {
 void snd_shutdown(void) {
     if(initted) {
         spu_disable();
+
+        asic_evt_remove_handler(ASIC_EVT_SPU_IRQ);
+        asic_evt_disable(ASIC_EVT_SPU_IRQ, ASIC_IRQ9);
+
         sem_destroy(&sem_qram);
         snd_mem_shutdown();
         initted = 0;
@@ -162,11 +225,7 @@ void snd_sh4_to_aica_stop(void) {
     aram_write_32((aram_addr_t)aica_header.cmd_queue + offsetof(aica_queue_t, process_ok), 0);
 }
 
-/* Transfer one packet of data from the AICA->SH4 queue. Expects to
-   find AICA_CMD_MAX_SIZE dwords of space available. Returns -1
-   if failure, 0 for no packets available, 1 otherwise. Failure
-   might mean a permanent failure since the queue is probably out of sync. */
-int snd_aica_to_sh4(void *packetout) {
+static int snd_from_aica(struct aica_header *header, void *packetout) {
     uint32 size, cnt, *pkt32;
     aram_addr_t top, start, stop;
     aica_queue_t resp_queue;
@@ -174,7 +233,7 @@ int snd_aica_to_sh4(void *packetout) {
     sem_wait(&sem_qram);
 
     /* Read the response queue's structure */
-    aram_read(&resp_queue, (aram_addr_t)aica_header.resp_queue, sizeof(resp_queue));
+    aram_read(&resp_queue, (aram_addr_t)header->resp_queue, sizeof(resp_queue));
 
     assert_msg(resp_queue.valid, "Queue is not yet valid");
 
@@ -225,7 +284,7 @@ int snd_aica_to_sh4(void *packetout) {
     }
 
     /* Finally, write a new tail value to signify that we've removed a packet */
-    aram_write_32((aram_addr_t)aica_header.resp_queue + offsetof(aica_queue_t, tail),
+    aram_write_32((aram_addr_t)header->resp_queue + offsetof(aica_queue_t, tail),
                   start - resp_queue.data);
 
     sem_signal(&sem_qram);
@@ -233,21 +292,15 @@ int snd_aica_to_sh4(void *packetout) {
     return 1;
 }
 
-/* Poll for responses from the AICA. We assume here that we're not
-   running in an interrupt handler (thread perhaps, of whoever
-   is using us). */
+/* Transfer one packet of data from the AICA->SH4 queue. Expects to
+   find AICA_CMD_MAX_SIZE dwords of space available. Returns -1
+   if failure, 0 for no packets available, 1 otherwise. Failure
+   might mean a permanent failure since the queue is probably out of sync. */
+int snd_aica_to_sh4(void *packetout) {
+    return snd_from_aica(&aica_header, packetout);
+}
+
+/* Old function to poll for responses from the AICA. Not used anymore,
+ * as the AICA will raise interrupts when it has something to send. */
 void snd_poll_resp(void) {
-    int rv;
-    uint32_t pkt[AICA_CMD_MAX_SIZE];
-    aica_cmd_t *pktcmd;
-
-    pktcmd = (aica_cmd_t *)pkt;
-
-    while((rv = snd_aica_to_sh4(pkt)) > 0) {
-        dbglog(DBG_DEBUG, "snd_poll_resp(): Received packet id %08lx, ts %08lx from AICA\n",
-               pktcmd->cmd, pktcmd->timestamp);
-    }
-
-    if(rv < 0)
-        dbglog(DBG_ERROR, "snd_poll_resp(): snd_aica_to_sh4 failed, giving up\n");
 }
