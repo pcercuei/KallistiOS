@@ -211,7 +211,7 @@ static void arm_main_task(void)
     }
 }
 
-void arm_main(void)
+__noreturn void arm_main(void)
 {
     /* Initialize the AICA part of the SPU */
     aica_init();
