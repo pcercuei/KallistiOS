@@ -7,24 +7,25 @@
 */
 
 #include <cmd_iface.h>
+#include <registers.h>
 #include "aica.h"
 
 void aica_init(void) {
     int i, j;
 
     /* Initialize AICA channels */
-    SNDREG32(0x2800) = 0x0000;
+    SPU_REG32(REG_SPU_MASTER_VOL) = 0;
 
     for(i = 0; i < 64; i++) {
-        CHNREG32(i, 0) = 0x8000;
+        SPU_REG32(REG_SPU_PLAY_CTRL(i)) = SPU_FIELD_PREP(SPU_PLAY_CTRL_KEY, 0x2);
 
         for(j = 4; j < 0x80; j += 4)
-            CHNREG32(i, j) = 0;
+            SPU_REG32(CHN_REG(i, j)) = 0;
 
-        CHNREG32(i, 20) = 0x1f;
+        SPU_REG32(REG_SPU_AMP_ENV2(i)) = SPU_FIELD_PREP(SPU_AMP_ENV2_RELEASE, 0x1f);
     }
 
-    SNDREG32(0x2800) = 0x000f;
+    SPU_REG32(REG_SPU_MASTER_VOL) = SPU_FIELD_PREP(SPU_MASTER_VOL_VOL, 0xf);
 }
 
 /* Translates a volume from linear form to logarithmic form (required by
@@ -108,43 +109,49 @@ void aica_play(unsigned char ch, void *smpptr, unsigned int mode,
        you are not looping, or the loop end point when you are (though
        storing more than that is a waste of memory if you're not doing
        volume enveloping). */
-    CHNREG32(ch, 8) = loopst & 0xffff;
-    CHNREG32(ch, 12) = loopend & 0xffff;
+    SPU_REG32(REG_SPU_LOOP_START(ch)) = loopst & 0xffff;
+    SPU_REG32(REG_SPU_LOOP_END(ch)) = loopend & 0xffff;
 
     /* Write resulting values */
-    CHNREG32(ch, 24) = (freq_hi << 11) | (freq_lo & 1023);
+    SPU_REG32(REG_SPU_PITCH(ch)) =
+        SPU_FIELD_PREP(SPU_PITCH_OCT, freq_hi) |
+        SPU_FIELD_PREP(SPU_PITCH_FNS, freq_lo);
 
     /* Convert the incoming pan into a hardware value and set it */
-    CHNREG8(ch, 36) = calc_aica_pan(pan);
-    CHNREG8(ch, 37) = 0xf;
-    /* turn off Low Pass Filter (LPF) */
-    CHNREG8(ch, 40) = 0x24;
-    /* Convert the incoming volume into a hardware value and set it */
-    CHNREG8(ch, 41) = calc_aica_vol(vol);
+    SPU_REG32(REG_SPU_VOL_PAN(ch)) =
+        SPU_FIELD_PREP(SPU_VOL_PAN_VOL, 0xf) |
+        SPU_FIELD_PREP(SPU_VOL_PAN_PAN, calc_aica_pan(pan));
+
+    /* turn off Low Pass Filter (LPF);
+       convert the incoming volume into a hardware value and set it */
+    SPU_REG32(REG_SPU_LPF1(ch)) = SPU_LPF1_OFF |
+        SPU_FIELD_PREP(SPU_LPF1_Q, 0x4) |
+        SPU_FIELD_PREP(SPU_LPF1_VOL, calc_aica_vol(vol));
 
     /* If we supported volume envelopes (which we don't yet) then
        this value would set that up. The top 4 bits determine the
        envelope speed. f is the fastest, 1 is the slowest, and 0
        seems to be an invalid value and does weird things). The
        default (below) sets it into normal mode (play and terminate/loop).
-    CHNREG32(ch, 16) = 0xf010;
+    SPU_REG32(REG_SPU_AMP_ENV1(ch)) = 0xf010;
     */
-    CHNREG32(ch, 16) = 0x1f;    /* No volume envelope */
+    SPU_REG32(REG_SPU_AMP_ENV1(ch)) =
+        SPU_FIELD_PREP(SPU_AMP_ENV1_ATTACK, 0x1f); /* No volume envelope */
 
 
     /* Set sample format, buffer address, and looping control. If
        0x0200 mask is set on reg 0, the sample loops infinitely. If
        it's not set, the sample plays once and terminates. We'll
        also set the bits to start playback here. */
-    CHNREG32(ch, 4) = (unsigned int)smpptr & 0xffff;
+    SPU_REG32(REG_SPU_ADDR_L(ch)) = (unsigned int)smpptr & 0xffff;
+
     playCont = (mode << 7) | ((unsigned int)smpptr >> 16);
-
     if(flags & AICA_PLAY_LOOP)
-        playCont |= 0x0200;
+        playCont |= SPU_PLAY_CTRL_LOOP;
     if(!(flags & AICA_PLAY_DELAY))
-        playCont |= 0xc000; /* key on */
+        playCont |= SPU_FIELD_PREP(SPU_PLAY_CTRL_KEY, 0x3); /* key on */
 
-    CHNREG32(ch, 0) = playCont;
+    SPU_REG32(REG_SPU_PLAY_CTRL(ch)) = playCont;
 }
 
 /* Start sound on all channels specified by chmap bitmap */
@@ -152,8 +159,10 @@ void aica_sync_play(unsigned long long chmap) {
     int i = 0;
 
     while(chmap) {
-        if(chmap & 0x1)
-            CHNREG32(i, 0) = CHNREG32(i, 0) | 0xc000;
+        if(chmap & 0x1) {
+            SPU_REG32(REG_SPU_PLAY_CTRL(i)) |=
+                SPU_FIELD_PREP(SPU_PLAY_CTRL_KEY, 0x3);
+        }
 
         i++;
         chmap >>= 1;
@@ -162,7 +171,12 @@ void aica_sync_play(unsigned long long chmap) {
 
 /* Stop the sound on a given channel */
 void aica_stop(unsigned char ch) {
-    CHNREG32(ch, 0) = (CHNREG32(ch, 0) & ~0x4000) | 0x8000;
+    uint32 ctrl = SPU_REG32(REG_SPU_PLAY_CTRL(ch));
+
+    ctrl = (ctrl & ~SPU_PLAY_CTRL_KEY) |
+        SPU_FIELD_PREP(SPU_PLAY_CTRL_KEY, 0x2);
+
+    SPU_REG32(REG_SPU_PLAY_CTRL(ch)) = ctrl;
 }
 
 
@@ -171,12 +185,19 @@ void aica_stop(unsigned char ch) {
 
 /* Set channel volume */
 void aica_vol(unsigned char ch, unsigned char vol) {
-    CHNREG8(ch, 41) = calc_aica_vol(vol);
+    uint32 lpf1 = SPU_REG32(REG_SPU_LPF1(ch));
+
+    lpf1 = (lpf1 & ~SPU_LPF1_VOL) |
+        SPU_FIELD_PREP(SPU_LPF1_VOL, calc_aica_vol(vol));
+
+    SPU_REG32(REG_SPU_LPF1(ch)) = lpf1;
 }
 
 /* Set channel pan */
 void aica_pan(unsigned char ch, unsigned char pan) {
-    CHNREG8(ch, 36) = calc_aica_pan(pan);
+    SPU_REG32(REG_SPU_VOL_PAN(ch)) =
+        SPU_FIELD_PREP(SPU_VOL_PAN_VOL, 0xf) |
+        SPU_FIELD_PREP(SPU_VOL_PAN_PAN, calc_aica_pan(pan));
 }
 
 /* Set channel frequency */
@@ -190,20 +211,26 @@ void aica_freq(unsigned char ch, unsigned int freq) {
     }
 
     freq_lo = (freq << 10) / freq_base;
-    CHNREG32(ch, 24) = (freq_hi << 11) | (freq_lo & 1023);
+    SPU_REG32(REG_SPU_PITCH(ch)) =
+        SPU_FIELD_PREP(SPU_PITCH_OCT, freq_hi) |
+        SPU_FIELD_PREP(SPU_PITCH_FNS, freq_lo);
 }
 
 /* Get channel position */
 int aica_get_pos(unsigned char ch) {
+    uint32 val;
     int i;
 
     /* Observe channel ch */
-    SNDREG8(0x280d) = ch;
+    val = SPU_REG32(REG_SPU_INFO_REQUEST);
+    SPU_REG32(REG_SPU_INFO_REQUEST) =
+        (val & ~SPU_INFO_REQUEST_REQ) |
+        SPU_FIELD_PREP(SPU_INFO_REQUEST_REQ, ch);
 
     /* Wait a while */
     for(i = 0; i < 20; i++)
         __asm__ volatile ("nop");  /* Prevent loop from being optimized out */
 
     /* Update position counters */
-    return SNDREG32(0x2814) & 0xffff;
+    return SPU_REG32(REG_SPU_INFO_PLAY_POS) & 0xffff;
 }
