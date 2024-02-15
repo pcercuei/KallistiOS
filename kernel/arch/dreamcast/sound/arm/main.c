@@ -11,6 +11,7 @@
 */
 
 #include "aica_cmd_iface.h"
+#include "aica_registers.h"
 #include "aica.h"
 #include "irq.h"
 #include "queue.h"
@@ -54,6 +55,8 @@ struct aica_header aica_header = {
 static void arm_main_task(void)
 {
     unsigned int i;
+
+    aica_printf("AICA firmware initialized.\n");
 
     /* Wait for a command */
     for (;;) {

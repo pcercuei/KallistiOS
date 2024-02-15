@@ -3,9 +3,11 @@
 #include "aica_registers.h"
 #include "aica.h"
 #include "irq.h"
+#include "lock.h"
 #include "queue.h"
 #include "task.h"
 
+#include <stdarg.h>
 #include <stddef.h>
 
 static struct task cmd_task;
@@ -14,6 +16,62 @@ static unsigned int cmd_task_stack[0x400];
 static _Bool notified;
 
 extern volatile unsigned int timer;
+
+static struct mutex queue_lock = MUTEX_INITIALIZER;
+
+static void aica_add_cmd(struct aica_header *header,
+                         const struct aica_cmd *cmd) {
+    volatile struct aica_queue *q_resp = header->resp_queue;
+    uint32 top, start, stop, *pkt32 = (uint32 *)cmd;
+
+    mutex_lock(&queue_lock);
+
+    top = q_resp->data + q_resp->size;
+    start = q_resp->data + q_resp->head;
+    stop = start + cmd->size * 4;
+
+    if (stop > top)
+        stop -= top;
+
+    while (start != stop) {
+        *(uint32 *)start = *pkt32++;
+
+        start += 4;
+        if (start >= top)
+            start = q_resp->data;
+    }
+
+    /* Finally, write the new head value to signify that we've added a packet */
+    q_resp->head = start - q_resp->data;
+
+    /* Ping the SH4 */
+    aica_interrupt();
+
+    mutex_unlock(&queue_lock);
+}
+
+static void aica_vprintf(const char *fmt, va_list ap) {
+    struct aica_cmd cmd = {
+        .size = sizeof(struct aica_cmd) / 4,
+        .cmd = AICA_RESP_DBGPRINT,
+        .misc = {
+            [0] = (unsigned int)fmt,
+            [1] = va_arg(ap, unsigned int),
+            [2] = va_arg(ap, unsigned int),
+            [3] = va_arg(ap, unsigned int),
+        },
+    };
+
+    aica_add_cmd(&aica_header, &cmd);
+}
+
+void aica_printf(const char *fmt, ...) {
+    va_list ap;
+
+    va_start(ap, fmt);
+    aica_vprintf(fmt, ap);
+    va_end(ap);
+}
 
 /* Process a CHAN command */
 static void
