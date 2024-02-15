@@ -1,5 +1,6 @@
 #include <aicaos/aica.h>
 #include <aicaos/irq.h>
+#include <aicaos/lock.h>
 #include <aicaos/queue.h>
 #include <aicaos/task.h>
 
@@ -13,6 +14,42 @@ static unsigned int cmd_task_stack[0x400];
 static _Bool notified;
 
 extern volatile unsigned int timer;
+
+static struct mutex queue_lock = MUTEX_INITIALIZER;
+
+void aica_do_add_cmd(struct aica_header *header, const struct aica_cmd *cmd) {
+    volatile struct aica_queue *q_resp = header->resp_queue;
+    uint32 top, start, stop, *pkt32 = (uint32 *)cmd;
+
+    mutex_lock(&queue_lock);
+
+    top = q_resp->data + q_resp->size;
+    start = q_resp->data + q_resp->head;
+    stop = start + cmd->size * 4;
+
+    if (stop > top)
+        stop -= top;
+
+    while (start != stop) {
+        *(uint32 *)start = *pkt32++;
+
+        start += 4;
+        if (start >= top)
+            start = q_resp->data;
+    }
+
+    /* Finally, write the new head value to signify that we've added a packet */
+    q_resp->head = start - q_resp->data;
+
+    /* Ping the SH4 */
+    aica_interrupt();
+
+    mutex_unlock(&queue_lock);
+}
+
+void aica_add_cmd(const struct aica_cmd *cmd) {
+    aica_do_add_cmd(&aica_header, cmd);
+}
 
 __attribute__((weak)) void
 aica_process_command(struct aica_header *header, struct aica_cmd *cmd)

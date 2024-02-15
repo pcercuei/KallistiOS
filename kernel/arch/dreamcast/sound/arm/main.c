@@ -15,6 +15,7 @@
 #include <aicaos/aica.h>
 #include <aicaos/queue.h>
 #include <aicaos/task.h>
+#include <stdio.h>
 
 /****************** Main Program ************************************/
 
@@ -89,6 +90,8 @@ void aica_process_command(struct aica_header *header, struct aica_cmd *cmd) {
 
 int main(int argc, char **argv) {
     unsigned int i;
+
+    printf("AICA firmware initialized.\n");
 
     for (;;) {
         /* Update channel position counters */
