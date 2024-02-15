@@ -16,6 +16,7 @@
 #include <kos/thread.h>
 #include <kos/mutex.h>
 #include <kos/timer.h>
+#include <dc/aram.h>
 #include <dc/g2bus.h>
 #include <dc/spu.h>
 #include <dc/sound/sound.h>
@@ -33,9 +34,27 @@ static int initted = 0;
    at the same time in separate threads. */
 static mutex_t queue_proc_mutex = MUTEX_INITIALIZER;
 
+static int snd_read_header(void *d) {
+    uint32_t hdr;
+    (void)d;
+
+    /* Get the address of the firmware header */
+    hdr = aram_read_32(AICA_HEADER_ADDR);
+    if(!hdr)
+        return 0;
+
+    /* Read twice to be sure */
+    if(hdr != aram_read_32(AICA_HEADER_ADDR))
+        return 0;
+
+    return hdr;
+}
+
 /* Initialize driver; note that this replaces the AICA program so that
    if you had anything else going on, it's gone now! */
 int snd_init(void) {
+    struct aica_header aica_header;
+    aram_addr_t header_addr;
     size_t amt;
 
     /* Finish loading the stream driver */
@@ -50,9 +69,24 @@ int snd_init(void) {
         dbglog(DBG_DEBUG, "snd_init(): loading %zu bytes into SPU RAM\n", amt);
         spu_memload_sq(0, (void *)snd_stream_drv_data, amt);
 
+        /* Clear header address so that we can detect it when it's set */
+        aram_write_32(AICA_HEADER_ADDR, 0);
+
         /* Enable the AICA and give it a few ms to start up */
         spu_enable();
-        thd_sleep(10);
+
+        header_addr = thd_poll(snd_read_header, NULL, 200);
+        if(!header_addr) {
+            dbglog(DBG_ERROR, "snd_init(): ARM firmware did not wake up\n");
+            spu_disable();
+            return -1;
+        }
+
+        dbglog(DBG_DEBUG, "snd_init(): Firmware header is at ARAM address 0x%lx\n",
+               header_addr);
+
+        /* Read the header */
+        aram_read(&aica_header, header_addr, sizeof(aica_header));
 
         /* Initialize the RAM allocator */
         snd_mem_init(AICA_RAM_START);
