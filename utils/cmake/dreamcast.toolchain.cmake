@@ -71,6 +71,9 @@ set(CMAKE_FIND_LIBRARY_SUFFIXES ".a")
 # Never use the CMAKE_FIND_ROOT_PATH to find programs with find_program()
 set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER)
 
+# Set sysroot to kos-ports folder
+set(CMAKE_SYSROOT ${KOS_PORTS})
+
 ##### Add Platform-Specific #defines #####
 add_compile_definitions(__DREAMCAST__ _arch_dreamcast)
 
