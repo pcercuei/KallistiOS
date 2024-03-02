@@ -88,19 +88,12 @@ void aica_process_command(struct aica_header *header, struct aica_cmd *cmd) {
 }
 
 int main(int argc, char **argv) {
-    volatile struct aica_queue *q_cmd = aica_header.cmd_queue;
+    unsigned int i;
 
-    int i;
-
-    /* Wait for a command */
-    for(; ;) {
+    for (;;) {
         /* Update channel position counters */
         for(i = 0; i < 64; i++)
             aica_header.channels[i].pos = aica_get_pos(i);
-
-        /* Check for a command */
-        if(q_cmd->process_ok)
-            process_cmd_queue(&aica_header);
 
         /* Little delay to prevent memory lock */
         task_sleep(ms_to_ticks(10));
