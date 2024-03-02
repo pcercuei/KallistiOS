@@ -4,7 +4,13 @@
 #include <aicaos/task.h>
 
 #include <cmd_iface.h>
+#include <registers.h>
 #include <stddef.h>
+
+static struct task cmd_task;
+static unsigned int cmd_task_stack[0x400];
+
+static _Bool notified;
 
 extern volatile unsigned int timer;
 
@@ -45,7 +51,7 @@ static uint32_t process_one(struct aica_header *header, uint32_t tail) {
 
 /* Look for an available request in the command queue; if one is there
    then process it and move the tail pointer. */
-void process_cmd_queue(struct aica_header *header) {
+static void process_cmd_queue(struct aica_header *header) {
     volatile struct aica_queue *q_cmd = header->cmd_queue;
     uint32_t head, tail, tsloc, ts;
 
@@ -78,4 +84,38 @@ void process_cmd_queue(struct aica_header *header) {
 
         q_cmd->tail = tail;
     }
+}
+
+static void aica_read_queue(struct aica_header *header)
+{
+    irq_ctx_t cxt;
+
+    for (;;) {
+        cxt = irq_disable();
+
+        if (!notified)
+            task_wait(header);
+
+        notified = 0;
+
+        irq_restore(cxt);
+
+        /* Process the command queue */
+        if (header->cmd_queue->process_ok)
+            process_cmd_queue(header);
+    }
+}
+
+void aica_init_queue(struct aica_header *header)
+{
+    unsigned int params[4] = { (unsigned int)header, };
+
+    task_init(&cmd_task, "queue", aica_read_queue, params, TASK_PRIO_HIGH,
+              cmd_task_stack, sizeof(cmd_task_stack));
+}
+
+void aica_notify_queue(void)
+{
+    notified = 1;
+    task_wake(&aica_header, 1);
 }

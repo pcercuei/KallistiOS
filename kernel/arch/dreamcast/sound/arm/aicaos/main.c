@@ -1,5 +1,6 @@
 #include <aicaos/aica.h>
 #include <aicaos/irq.h>
+#include <aicaos/queue.h>
 #include <aicaos/task.h>
 #include <cmd_iface.h>
 #include <stddef.h>
@@ -46,6 +47,7 @@ void arm_main(void)
 
     aica_interrupt_init();
     aica_init_tasks();
+    aica_init_queue(&aica_header);
 
     aica_header.buffer_size =
         (unsigned int)&__heap_end - (unsigned int)&__heap_start;

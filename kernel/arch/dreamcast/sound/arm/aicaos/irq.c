@@ -8,7 +8,9 @@
 
 #include <cmd_iface.h>
 #include <registers.h>
+
 #include <aicaos/irq.h>
+#include <aicaos/queue.h>
 #include <aicaos/task.h>
 
 unsigned int timer;
@@ -31,6 +33,9 @@ __noreturn void fiq_handler(void)
         /* Ack the SH4 interrupt */
         SPU_REG32(REG_SPU_INT_RESET) = SPU_INT_ENABLE_SH4;
         SPU_REG32(REG_SPU_INT_CLEAR) = 1;
+
+        /* Ping the queue thread */
+        aica_notify_queue();
         break;
 
     default:
