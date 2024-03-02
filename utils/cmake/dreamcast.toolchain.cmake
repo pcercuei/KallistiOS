@@ -51,8 +51,10 @@ if(NOT DEFINED KOS_PORTS)
     message(VERBOSE "KOS_PORTS: ${KOS_PORTS}")
 endif()
 
+list(APPEND CMAKE_MODULE_PATH $ENV{KOS_BASE}/utils/cmake)
+
 ##### Configure CMake System #####
-set(CMAKE_SYSTEM_NAME Generic-ELF)
+set(CMAKE_SYSTEM_NAME Dreamcast)
 set(CMAKE_SYSTEM_VERSION 1)
 set(CMAKE_SYSTEM_PROCESSOR SH4)
 set(PLATFORM_DREAMCAST TRUE)
