@@ -1,11 +1,15 @@
 #include <aicaos/aica.h>
 #include <aicaos/irq.h>
+#include <aicaos/task.h>
 #include <cmd_iface.h>
 #include <stddef.h>
 
 extern int main(int argc, char **argv);
 
 extern unsigned char __heap_start, __heap_end;
+
+static struct task main_task;
+static unsigned int main_task_stack[0x400];
 
 static char command_buffer[0x10000];
 static char response_buffer[0x10000];
@@ -35,10 +39,13 @@ struct aica_header aica_header = {
 /* Initialize the OS */
 void arm_main(void)
 {
+    unsigned int args[4] = { 0 };
+
     /* Initialize the AICA part of the SPU */
     aica_init();
 
     aica_interrupt_init();
+    aica_init_tasks();
 
     aica_header.buffer_size =
         (unsigned int)&__heap_end - (unsigned int)&__heap_start;
@@ -46,5 +53,10 @@ void arm_main(void)
     /* Set header pointer, so that the SH4 knows where the header is */
     *(struct aica_header **)AICA_HEADER_ADDR = &aica_header;
 
-    main(0, NULL);
+    /* Register and add our main task */
+    task_init(&main_task, "main", main, args, TASK_PRIO_LOW,
+              main_task_stack, sizeof(main_task_stack));
+
+    current_task = &main_task;
+    __task_reschedule(0);
 }
