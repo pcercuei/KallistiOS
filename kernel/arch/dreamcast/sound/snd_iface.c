@@ -179,6 +179,11 @@ void snd_shutdown(void) {
     }
 }
 
+static void snd_interrupt_arm(void)
+{
+    g2_write_32(REG_SPU_INT_SEND, SPU_INT_ENABLE_SH4);
+}
+
 /* Submit a request to the SH4->AICA queue; size is in uint32's */
 int snd_sh4_to_aica(void *packet, uint32_t size) {
     uint32_t  *pkt32, cnt;
@@ -222,6 +227,9 @@ int snd_sh4_to_aica(void *packet, uint32_t size) {
        a packet for it to process */
     aram_write_32((aram_addr_t)aica_header.cmd_queue + offsetof(aica_queue_t, head),
                   start - cmd_queue.data);
+
+    /* Notify the ARM that we have something for it */
+    snd_interrupt_arm();
 
     /* We could wait until head == tail here for processing, but there's
        not really much point; it'll just slow things down. */
