@@ -1,4 +1,5 @@
 #include <aicaos/aica.h>
+#include <aicaos/irq.h>
 #include <cmd_iface.h>
 #include <stddef.h>
 
@@ -36,6 +37,8 @@ void arm_main(void)
 {
     /* Initialize the AICA part of the SPU */
     aica_init();
+
+    aica_interrupt_init();
 
     aica_header.buffer_size =
         (unsigned int)&__heap_end - (unsigned int)&__heap_start;
