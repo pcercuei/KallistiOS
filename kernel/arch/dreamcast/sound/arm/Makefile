@@ -1,4 +1,4 @@
-OBJS := crt0.o main.o aica.o irq.o
+OBJS := crt0.o main.o aica.o irq.o task_asm.o task.o
 
 all: stream.drv
 

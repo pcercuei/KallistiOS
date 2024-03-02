@@ -13,11 +13,15 @@
 #include "aica_cmd_iface.h"
 #include "aica.h"
 #include "irq.h"
+#include "task.h"
 
 #include <stddef.h>
 
 extern unsigned char __heap_start, __heap_end;
 extern volatile unsigned int timer;
+
+static struct task main_task;
+static unsigned int main_task_stack[0x400];
 
 static char command_buffer[0x10000];
 static char response_buffer[0x10000];
@@ -187,10 +191,32 @@ void process_cmd_queue(struct aica_header *header) {
     }
 }
 
-int arm_main(void) {
+static void arm_main_task(void)
+{
     volatile struct aica_queue *q_cmd = aica_header.cmd_queue;
+    unsigned int i;
 
-    int i;
+    /* Wait for a command */
+    for (;;) {
+        /* Update channel position counters */
+        for(i = 0; i < 64; i++)
+            aica_header.channels[i].pos = aica_get_pos(i);
+
+        /* Check for a command */
+        if (q_cmd->process_ok)
+            process_cmd_queue(&aica_header);
+
+        /* Little delay to prevent memory lock */
+        timer_wait(10);
+    }
+}
+
+void arm_main(void)
+{
+    /* Initialize the AICA part of the SPU */
+    aica_init();
+    aica_interrupt_init();
+    aica_init_tasks();
 
     aica_header.buffer_size =
         (unsigned int)&__heap_end - (unsigned int)&__heap_start;
@@ -198,21 +224,9 @@ int arm_main(void) {
     /* Set header pointer, so that the SH4 knows where the header is */
     *(struct aica_header **)AICA_HEADER_ADDR = &aica_header;
 
-    /* Initialize the AICA part of the SPU */
-    aica_init();
-    aica_interrupt_init();
+    /* Register and add our main task */
+    task_init(&main_task, arm_main_task, NULL, TASK_PRIO_LOW,
+              main_task_stack, sizeof(main_task_stack));
 
-    /* Wait for a command */
-    for(; ;) {
-        /* Update channel position counters */
-        for(i = 0; i < 64; i++)
-            aica_header.channels[i].pos = aica_get_pos(i);
-
-        /* Check for a command */
-        if(q_cmd->process_ok)
-            process_cmd_queue(&aica_header);
-
-        /* Little delay to prevent memory lock */
-        timer_wait(10);
-    }
+    __task_reschedule(0);
 }
