@@ -1,3 +1,5 @@
+OBJS := crt0.o main.o aica.o irq.o
+
 all: stream.drv
 
 aica_fw.h: stream.drv
@@ -24,7 +26,7 @@ stream.drv: stream.drv.prebuilt
 	cp $< $@
 endif
 
-prog.elf: crt0.o main.o aica.o
+prog.elf: $(OBJS)
 	$(DC_ARM_CC) -Wl,-Tscript.ld,-Map,prog.map,-N -nostartfiles -nostdlib -e reset -o $@ $(filter-out crt0.o,$^) -lgcc
 
 %.o: %.c
@@ -34,4 +36,4 @@ prog.elf: crt0.o main.o aica.o
 	$(DC_ARM_AS) $(DC_ARM_AFLAGS) $< -o $@
 
 clean:
-	-rm -f *.o *.srec *.elf 1ST_READ.BIN prog.bin *.bck prog.map
+	-rm -f $(OBJS) *.srec *.elf 1ST_READ.BIN prog.bin *.bck prog.map

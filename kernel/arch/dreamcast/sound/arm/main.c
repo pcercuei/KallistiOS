@@ -12,6 +12,7 @@
 
 #include "aica_cmd_iface.h"
 #include "aica.h"
+#include "irq.h"
 
 #include <stddef.h>
 
@@ -208,6 +209,7 @@ int arm_main(void) {
 
     /* Initialize the AICA part of the SPU */
     aica_init();
+    aica_interrupt_init();
 
     /* Wait for a command */
     for(; ;) {
