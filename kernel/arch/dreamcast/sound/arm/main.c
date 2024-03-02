@@ -53,7 +53,6 @@ struct aica_header aica_header = {
 
 static void arm_main_task(void)
 {
-    volatile struct aica_queue *q_cmd = aica_header.cmd_queue;
     unsigned int i;
 
     /* Wait for a command */
@@ -61,10 +60,6 @@ static void arm_main_task(void)
         /* Update channel position counters */
         for(i = 0; i < 64; i++)
             aica_header.channels[i].pos = aica_get_pos(i);
-
-        /* Check for a command */
-        if (q_cmd->process_ok)
-            process_cmd_queue(&aica_header);
 
         /* Little delay to prevent memory lock */
         task_sleep(ms_to_ticks(10));
@@ -77,6 +72,9 @@ __noreturn void arm_main(void)
     aica_init();
     aica_interrupt_init();
     aica_init_tasks();
+
+    /* Initialize the communication queues */
+    aica_init_queue(&aica_header);
 
     aica_header.buffer_size =
         (unsigned int)&__heap_end - (unsigned int)&__heap_start;

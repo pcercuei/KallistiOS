@@ -1,4 +1,5 @@
 
 struct aica_header;
 
-void process_cmd_queue(struct aica_header *header);
+void aica_init_queue(struct aica_header *header);
+void aica_notify_queue(void);
