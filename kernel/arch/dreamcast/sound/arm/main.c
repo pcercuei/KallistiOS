@@ -11,6 +11,7 @@
 */
 
 #include <aicaos/aica.h>
+#include <aicaos/task.h>
 
 #include <stddef.h>
 #include <string.h>
@@ -18,15 +19,6 @@
 #include "aica_cmd_iface.h"
 
 extern volatile unsigned int timer;
-
-/****************** Timer *******************************************/
-
-void timer_wait(uint32 jiffies) {
-    uint32 fin = timer + jiffies;
-
-    while(timer <= fin)
-        ;
-}
 
 /****************** Main Program ************************************/
 
@@ -188,6 +180,6 @@ int main(int argc, char **argv) {
             process_cmd_queue();
 
         /* Little delay to prevent memory lock */
-        timer_wait(10);
+        task_sleep(ms_to_ticks(10));
     }
 }
