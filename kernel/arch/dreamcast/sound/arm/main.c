@@ -10,14 +10,15 @@
 
 */
 
-#include <aicaos/aica.h>
 #include <aicaos/task.h>
 #include <cmd_iface.h>
 
 #include <stddef.h>
 #include <string.h>
 
-extern volatile unsigned int timer;
+#include <aicaos/aica.h>
+#include <aicaos/queue.h>
+#include <aicaos/task.h>
 
 /****************** Main Program ************************************/
 
@@ -78,7 +79,7 @@ void process_chn(struct aica_header *header, aica_cmd_t *pkt, aica_channel_t *ch
     }
 }
 
-static void aica_do_process_command(struct aica_header *header, aica_cmd_t *cmd) {
+void aica_process_command(struct aica_header *header, struct aica_cmd *cmd) {
     /* Figure out what type of packet it is */
     switch(cmd->cmd) {
         case AICA_CMD_CHAN:
@@ -87,77 +88,6 @@ static void aica_do_process_command(struct aica_header *header, aica_cmd_t *cmd)
         default:
             /* error */
             break;
-    }
-}
-
-void aica_process_command(aica_cmd_t *cmd) {
-    aica_do_process_command(&aica_header, cmd);
-}
-
-/* Process one packet of queue data */
-uint32_t process_one(struct aica_header *header, uint32 tail) {
-    volatile struct aica_queue *q_cmd = header->cmd_queue;
-    uint32_t pktdata[AICA_CMD_MAX_SIZE], *pdptr, size, i;
-    volatile uint32_t * src;
-    aica_cmd_t  * pkt;
-
-    src = (volatile uint32_t *)(q_cmd->data + tail);
-    pkt = (aica_cmd_t *)pktdata;
-    pdptr = pktdata;
-
-    /* Get the size field */
-    size = *src;
-
-    if(size > AICA_CMD_MAX_SIZE)
-        size = AICA_CMD_MAX_SIZE;
-
-    /* Copy out the packet data */
-    for(i = 0; i < size; i++) {
-        *pdptr++ = *src++;
-
-        if((uint32_t)src >= (q_cmd->data + q_cmd->size))
-            src = (volatile uint32_t *)q_cmd->data;
-    }
-
-    aica_do_process_command(header, pkt);
-
-    return size;
-}
-
-/* Look for an available request in the command queue; if one is there
-   then process it and move the tail pointer. */
-void process_cmd_queue(struct aica_header *header) {
-    volatile struct aica_queue *q_cmd = header->cmd_queue;
-    uint32_t head, tail, tsloc, ts;
-
-    /* Grab these values up front in case SH-4 changes head */
-    head = q_cmd->head;
-    tail = q_cmd->tail;
-
-    /* Do we have anything to process? */
-    while(head != tail) {
-        /* Look at the next packet. If our clock isn't there yet, then
-           we won't process anything yet either. */
-        tsloc = tail + offsetof(aica_cmd_t, timestamp);
-
-        if(tsloc >= q_cmd->size)
-            tsloc -= q_cmd->size;
-
-        ts = *((volatile uint32_t *)(q_cmd->data + tsloc));
-
-        if(ts > 0 && ts >= timer)
-            return;
-
-        /* Process it */
-        ts = process_one(header, tail);
-
-        /* Ok, skip over the packet */
-        tail += ts * 4;
-
-        if(tail >= q_cmd->size)
-            tail -= q_cmd->size;
-
-        q_cmd->tail = tail;
     }
 }
 
