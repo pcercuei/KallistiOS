@@ -48,15 +48,6 @@ struct aica_header aica_header = {
     .buffer = &__heap_start,
 };
 
-/****************** Timer *******************************************/
-
-void timer_wait(uint32 jiffies) {
-    uint32 fin = timer + jiffies;
-
-    while(timer <= fin)
-        ;
-}
-
 /****************** Main Program ************************************/
 
 /* Process a CHAN command */
@@ -207,7 +198,7 @@ static void arm_main_task(void)
             process_cmd_queue(&aica_header);
 
         /* Little delay to prevent memory lock */
-        timer_wait(10);
+        task_sleep(ms_to_ticks(10));
     }
 }
 
