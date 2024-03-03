@@ -16,15 +16,6 @@
 
 extern volatile unsigned int timer;
 
-/****************** Timer *******************************************/
-
-void timer_wait(uint32 jiffies) {
-    uint32 fin = timer + jiffies;
-
-    while(timer <= fin)
-        ;
-}
-
 /****************** Main Program ************************************/
 
 /* Process a CHAN command */
@@ -175,6 +166,6 @@ int main(int argc, char **argv) {
             process_cmd_queue(&aica_header);
 
         /* Little delay to prevent memory lock */
-        timer_wait(10);
+        task_sleep(ms_to_ticks(10));
     }
 }
