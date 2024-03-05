@@ -5,8 +5,8 @@
 
 #define DEFAULT_STACK_SIZE 4096
 
-/* 44 ticks of the 44100 Hz clock ~= 1000 Hz */
-#define DEFAULT_TIMEOUT_WAKEUP 44
+/* 1764 ticks of the 44100 Hz clock == 25 Hz */
+#define DEFAULT_TIMEOUT_WAKEUP 1764
 
 typedef unsigned int ticks_t;
 
