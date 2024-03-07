@@ -57,6 +57,7 @@ struct task {
     ticks_t wakeup;
     enum task_state state;
     const char *name;
+    enum task_prio prio, real_prio;
 };
 
 /* Pointer to the current task */
@@ -113,5 +114,11 @@ __noreturn void __task_reschedule(bool skip_me);
 
 /* Exit the current task */
 __noreturn void task_exit(void);
+
+/* Boost the given task's priority to match the current task's priority. */
+void task_boost(struct task *task);
+
+/* Unboost the current task's priority. */
+void task_unboost(void);
 
 #endif /* __AICAOS_TASK_H */
