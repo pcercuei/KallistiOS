@@ -45,6 +45,7 @@ struct task {
     unsigned int id;
     ticks_t wakeup;
     enum task_state state;
+    enum task_prio prio, real_prio;
 };
 
 /* Pointer to the current task */
@@ -98,5 +99,11 @@ unsigned short task_read_counter(void);
 
 /* Reschedule without saving the current task. */
 __noreturn void __task_reschedule(_Bool skip_me);
+
+/* Boost the given task's priority to match the current task's priority. */
+void task_boost(struct task *task);
+
+/* Unboost the current task's priority. */
+void task_unboost(void);
 
 #endif

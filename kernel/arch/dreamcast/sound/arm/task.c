@@ -189,6 +189,8 @@ void task_init(struct task *task, void *func, unsigned int params[4],
     task->state = TASK_RUNNING;
     task->wait_next = NULL;
     task->awaken = 0;
+    task->prio = prio;
+    task->real_prio = prio;
 
     cxt = irq_disable();
     task->id = task_counter++;
@@ -255,6 +257,46 @@ void task_wake(void *obj, _Bool all)
                 break;
         }
     }
+
+    irq_restore(cxt);
+}
+
+static void task_set_prio(struct task *task, enum task_prio prio)
+{
+    struct task *tmp, *prev = NULL;
+    enum task_prio curr = task->prio;
+
+    for (tmp = tasks[curr]; tmp; prev = tmp, tmp = tmp->next) {
+        if (tmp == task) {
+            if (prev)
+                prev->next = tmp->next;
+            else
+                tasks[curr] = tmp->next;
+            break;
+        }
+    }
+
+    task->prio = prio;
+    task->next = tasks[prio];
+    tasks[prio] = task;
+}
+
+void task_boost(struct task *task)
+{
+    irq_ctx_t cxt = irq_disable();
+
+    if (current_task->prio < task->prio)
+        task_set_prio(task, current_task->prio);
+
+    irq_restore(cxt);
+}
+
+void task_unboost(void)
+{
+    irq_ctx_t cxt = irq_disable();
+
+    if (current_task->prio != current_task->real_prio)
+        task_set_prio(current_task, current_task->real_prio);
 
     irq_restore(cxt);
 }
