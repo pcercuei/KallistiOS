@@ -29,6 +29,11 @@ void aica_init(void) {
     SPU_REG32(REG_SPU_MASTER_VOL) = SPU_FIELD_PREP(SPU_MASTER_VOL_VOL, 0xf);
 }
 
+void counter_init(unsigned char ch) {
+    aica_play(ch, (void *)0, AICA_SM_ADPCM, 0, 0xffff,
+	      44100, 0, 0, AICA_PLAY_LOOP);
+}
+
 /* Translates a volume from linear form to logarithmic form (required by
    the AICA chip */
 static unsigned char logs[] = {
