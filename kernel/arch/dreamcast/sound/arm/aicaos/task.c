@@ -6,10 +6,12 @@
    Simple threading system for ARM
 */
 
-#include <stddef.h>
-
+#include <aicaos/aica.h>
 #include <aicaos/irq.h>
 #include <aicaos/task.h>
+#include <stddef.h>
+
+static unsigned char counter_channel;
 
 static struct task idle_task;
 struct task *current_task;
@@ -32,6 +34,17 @@ static void idle_function(void)
 void aica_init_tasks(void)
 {
     task_init(&idle_task, "idle", idle_function, NULL, TASK_PRIO_IDLE, NULL, 0);
+
+    /* Use a regular channel as a counter.
+     * Since timers are not readable, we use this channel to read how much time
+     * has elapsed since the last time a timer was programmed. */
+    counter_channel = 63;
+    counter_init(counter_channel);
+}
+
+unsigned short task_read_counter(void)
+{
+    return aica_get_pos(counter_channel);
 }
 
 static __noreturn void __task_select(struct task *task)
