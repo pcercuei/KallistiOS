@@ -16,7 +16,7 @@ void aica_stop(uint8_t ch);
 void aica_vol(uint8_t ch, uint8_t vol);
 void aica_pan(uint8_t ch, uint8_t pan);
 void aica_freq(uint8_t ch, uint32_t freq);
-int aica_get_pos(uint8_t ch);
+uint16_t aica_get_pos(uint8_t ch);
 
 #endif  /* __AICA_H */
 

@@ -8,6 +8,7 @@
 */
 
 #include <aicaos/aica.h>
+#include <aicaos/irq.h>
 #include <cmd_iface.h>
 #include <registers.h>
 
@@ -223,9 +224,11 @@ void aica_freq(uint8_t ch, uint32_t freq) {
 }
 
 /* Get channel position */
-int aica_get_pos(uint8_t ch) {
+uint16_t aica_get_pos(uint8_t ch) {
     uint32_t val;
     int i;
+
+    irq_disable_scoped();
 
     /* Observe channel ch */
     val = SPU_REG32(REG_SPU_INFO_REQUEST);
