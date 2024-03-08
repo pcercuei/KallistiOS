@@ -18,5 +18,7 @@ void aica_pan(uint8_t ch, uint8_t pan);
 void aica_freq(uint8_t ch, uint32_t freq);
 uint16_t aica_get_pos(uint8_t ch);
 
+void counter_init(unsigned char ch);
+
 #endif  /* __AICA_H */
 
