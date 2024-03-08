@@ -35,5 +35,8 @@ void aica_stop(uint8_t chn);
 uint8_t aica_reserve_channel(void);
 void aica_unreserve_channel(uint8_t ch);
 
+/* Read the hardware value of the counter. */
+uint16_t aica_read_counter(void);
+
 #endif  /* __AICAOS_AICA_H */
 

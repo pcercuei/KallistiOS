@@ -25,7 +25,10 @@ extern volatile aica_channel_t *chans;
 /* Channels mask in inversed order (bit 0 is channel 63, bit 63 is channel 0) */
 static uint64_t channels_mask;
 
+static uint8_t counter_channel;
+
 static void aica_init(void) {
+    aica_chn_data_t counter_data;
     int i, j;
 
     /* Initialize AICA channels */
@@ -42,6 +45,26 @@ static void aica_init(void) {
     }
 
     SPU_REG32(REG_SPU_MASTER_VOL) = SPU_FIELD_PREP(SPU_MASTER_VOL_VOL, 0xf);
+
+    /* Use a regular channel as a counter.
+     * Since timers are not readable, we use this channel to read how much time
+     * has elapsed since the last time a timer was programmed. */
+    counter_channel = aica_reserve_channel();
+
+    counter_data = (aica_chn_data_t){
+        .freq = 44100,
+        .loopend = 0xffff,
+        .type = AICA_SAMPLE_ADPCM,
+        .flags = AICA_CHN_DATA_LOOP,
+    };
+
+    aica_update(counter_channel, &counter_data);
+    aica_start(counter_channel);
+}
+
+uint16_t aica_read_counter(void)
+{
+    return aica_get_pos(counter_channel);
 }
 aicaos_initcall(aica_init);
 
