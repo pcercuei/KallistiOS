@@ -9,6 +9,7 @@
 #include "aica_cmd_iface.h"
 #include "aica_registers.h"
 #include "aica.h"
+#include "irq.h"
 
 void aica_init(void) {
     int i, j;
@@ -217,9 +218,13 @@ void aica_freq(unsigned char ch, unsigned int freq) {
 }
 
 /* Get channel position */
-int aica_get_pos(unsigned char ch) {
+unsigned short aica_get_pos(unsigned char ch) {
+    unsigned short pos;
+    irq_ctx_t cxt;
     uint32 val;
     int i;
+
+    cxt = irq_disable();
 
     /* Observe channel ch */
     val = SPU_REG32(REG_SPU_INFO_REQUEST);
@@ -232,5 +237,9 @@ int aica_get_pos(unsigned char ch) {
         __asm__ volatile ("nop");  /* Prevent loop from being optimized out */
 
     /* Update position counters */
-    return SPU_REG32(REG_SPU_INFO_PLAY_POS) & 0xffff;
+    pos = SPU_REG32(REG_SPU_INFO_PLAY_POS) & 0xffff;
+
+    irq_restore(cxt);
+
+    return pos;
 }
