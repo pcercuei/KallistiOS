@@ -55,6 +55,9 @@ void task_reschedule(void);
  * to always pick a different task. */
 void task_yield(void);
 
+/* Read the hardware value of the task counter. */
+unsigned short task_read_counter(void);
+
 /* Reschedule without saving the current task. */
 __noreturn void __task_reschedule(_Bool skip_me);
 
