@@ -1,4 +1,4 @@
-OBJS := crt0.o main.o aica.o irq.o lock.o queue.o task_asm.o task.o
+OBJS := crt0.o main.o aica.o irq.o lock.o mm.o queue.o task_asm.o task.o tlsf/tlsf.o
 
 all: stream.drv
 
@@ -28,6 +28,8 @@ endif
 
 prog.elf: $(OBJS)
 	$(DC_ARM_CC) -Wl,-Tscript.ld,-Map,prog.map,-N -nostartfiles -nostdlib -e reset -o $@ $(filter-out crt0.o,$^) -lgcc
+
+tlsf/tlsf.o: DC_ARM_CFLAGS += -I $(KOS_BASE)/kernel/arch/dreamcast/sound/arm/tlsf_include
 
 %.o: %.c
 	$(DC_ARM_CC) $(DC_ARM_CFLAGS) $(DC_ARM_INCS) -I $(KOS_BASE)/kernel/arch/dreamcast/include/dc/sound -c $< -o $@

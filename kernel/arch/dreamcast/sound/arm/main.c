@@ -14,6 +14,7 @@
 #include "aica_registers.h"
 #include "aica.h"
 #include "irq.h"
+#include "mm.h"
 #include "queue.h"
 #include "task.h"
 
@@ -78,6 +79,9 @@ __noreturn void arm_main(void)
 
     /* Initialize the communication queues */
     aica_init_queue(&aica_header);
+
+    /* Initialize the memory manager */
+    aica_mm_init();
 
     aica_header.buffer_size =
         (unsigned int)&__heap_end - (unsigned int)&__heap_start;
