@@ -18,5 +18,8 @@ unsigned short aica_get_pos(unsigned char ch);
 
 void counter_init(unsigned char ch);
 
+unsigned char aica_reserve_channel(void);
+void aica_unreserve_channel(unsigned char ch);
+
 #endif  /* __AICA_H */
 

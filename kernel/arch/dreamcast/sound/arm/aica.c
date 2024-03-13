@@ -11,6 +11,9 @@
 #include "aica.h"
 #include "irq.h"
 
+/* Channels mask in inversed order (bit 0 is channel 63, bit 63 is channel 0) */
+static unsigned long long channels_mask;
+
 void aica_init(void) {
     int i, j;
 
@@ -247,4 +250,28 @@ unsigned short aica_get_pos(unsigned char ch) {
     irq_restore(cxt);
 
     return pos;
+}
+
+unsigned char aica_reserve_channel(void)
+{
+    unsigned char ch;
+    irq_ctx_t cxt;
+
+    cxt = irq_disable();
+
+    ch = __builtin_ffsll(~channels_mask) - 1;
+    channels_mask |= 1ull << ch;
+
+    irq_restore(cxt);
+
+    return 63 - ch;
+}
+
+void aica_unreserve_channel(unsigned char ch)
+{
+    irq_ctx_t cxt = irq_disable();
+
+    channels_mask &= ~(1ull << (63 - ch));
+
+    irq_restore(cxt);
 }
