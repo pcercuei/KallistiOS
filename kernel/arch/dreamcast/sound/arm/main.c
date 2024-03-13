@@ -27,6 +27,7 @@
 void process_chn(struct aica_header *header, aica_cmd_t *pkt, aica_channel_t *chndat) {
     uint32_t cmd_id = pkt->cmd_id;
     struct aica_channel *chn = &header->channels[cmd_id];
+    uint64_t start_sync;
     unsigned int flags;
 
     switch(chndat->cmd & AICA_CH_CMD_MASK) {
@@ -35,7 +36,8 @@ void process_chn(struct aica_header *header, aica_cmd_t *pkt, aica_channel_t *ch
         case AICA_CH_CMD_START:
 
             if(chndat->cmd & AICA_CH_START_SYNC) {
-                aica_sync_play(cmd_id);
+                start_sync = ((uint64_t)pkt->misc[0] << 32) | cmd_id;
+                aica_sync_play(start_sync);
             }
             else {
                 memcpy(chn, chndat, sizeof(aica_channel_t));
