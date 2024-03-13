@@ -13,7 +13,9 @@
 #include <aicaos/task.h>
 #include <cmd_iface.h>
 
+#include <errno.h>
 #include <stddef.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include <aicaos/aica.h>
@@ -82,6 +84,36 @@ void process_chn(struct aica_header *header, aica_cmd_t *pkt, aica_channel_t *ch
     }
 }
 
+static void process_mm(struct aica_header *header,
+                       uint32 cmd, uint32 arg0, uint32 arg1)
+{
+    unsigned int resp = 0;
+
+    switch (cmd & AICA_CMD_MM_MASK) {
+    case AICA_MM_MEMALIGN:
+        if (arg0 > 4)
+            resp = (unsigned int)aligned_alloc(arg0, arg1);
+        else
+            resp = (unsigned int)malloc(arg1);
+        break;
+    case AICA_MM_REALLOC:
+        resp = (unsigned int)realloc((void *)arg0, arg1);
+        break;
+    case AICA_MM_AVAILABLE:
+	resp = ENOSYS;
+        //resp = aica_mem_available();
+        break;
+    case AICA_MM_FREE:
+        free((void *)arg0);
+        return;
+    default:
+        /* Unknown command */
+        return;
+    }
+
+    aica_send_response_code(header, resp);
+}
+
 static void process_reserve(struct aica_header *header)
 {
     unsigned char ch = aica_reserve_channel();
@@ -102,6 +134,11 @@ void aica_process_command(struct aica_header *header, struct aica_cmd *cmd) {
         case AICA_CMD_CHAN:
             process_chn(header, cmd, (aica_channel_t *)cmd->cmd_data);
             break;
+
+        case AICA_CMD_MM:
+            process_mm(header, cmd->cmd_id, cmd->misc[0], cmd->misc[1]);
+            break;
+
         default:
             /* error */
             break;
