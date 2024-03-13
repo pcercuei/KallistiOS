@@ -20,5 +20,8 @@ uint16_t aica_get_pos(uint8_t ch);
 
 void counter_init(unsigned char ch);
 
+uint8_t aica_reserve_channel(void);
+void aica_unreserve_channel(uint8_t ch);
+
 #endif  /* __AICA_H */
 
