@@ -41,7 +41,7 @@ void aica_init_tasks(void)
     /* Use a regular channel as a counter.
      * Since timers are not readable, we use this channel to read how much time
      * has elapsed since the last time a timer was programmed. */
-    counter_channel = 63;
+    counter_channel = aica_reserve_channel();
     counter_init(counter_channel);
 }
 
