@@ -131,6 +131,24 @@ process_chn(struct aica_header *header, aica_cmd_t *pkt, aica_channel_t *chndat)
     }
 }
 
+static void send_response_code(struct aica_header *header, unsigned int code)
+{
+    struct aica_cmd cmd = {
+        .size = sizeof(struct aica_cmd) / 4,
+        .cmd = AICA_RESP,
+        .misc[0] = code,
+    };
+
+    aica_add_cmd(header, &cmd);
+}
+
+static void process_reserve(struct aica_header *header)
+{
+    unsigned char ch = aica_reserve_channel();
+
+    send_response_code(header, ch);
+}
+
 /* Process one packet of queue data */
 static uint32 process_one(struct aica_header *header, uint32 tail) {
     volatile struct aica_queue *q_cmd = header->cmd_queue;
@@ -158,6 +176,13 @@ static uint32 process_one(struct aica_header *header, uint32 tail) {
 
     /* Figure out what type of packet it is */
     switch(pkt->cmd) {
+        case AICA_CMD_RESERVE:
+            if (pkt->misc[0] == (unsigned int)-1)
+                process_reserve(header);
+            else
+                aica_unreserve_channel(pkt->misc[0]);
+            break;
+
         case AICA_CMD_CHAN:
             process_chn(header, pkt, (aica_channel_t *)pkt->cmd_data);
             break;

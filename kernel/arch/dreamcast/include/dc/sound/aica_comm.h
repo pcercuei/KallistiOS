@@ -101,6 +101,7 @@ typedef struct aica_channel {
     \brief                   Values of commands for aica_cmd_t
     @{
 */
+#define AICA_CMD_RESERVE    0x00000001  /**< \brief Reserve/unreserve a channel */
 #define AICA_CMD_CHAN       0x00000002  /**< \brief Perform a wavetable action   */
 /** @} */
 
