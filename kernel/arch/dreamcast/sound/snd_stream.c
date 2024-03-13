@@ -504,6 +504,7 @@ void snd_stream_queue_disable(snd_stream_hnd_t hnd) {
 /* Start streaming (or if queueing is enabled, just get ready) */
 static void snd_stream_start_type(snd_stream_hnd_t hnd, uint32_t type, uint32_t freq, int st) {
     AICA_CMDSTR_CHANNEL(tmp, cmd, chan);
+    uint64_t start_sync;
 
     CHECK_HND(hnd);
 
@@ -560,13 +561,16 @@ static void snd_stream_start_type(snd_stream_hnd_t hnd, uint32_t type, uint32_t 
         snd_sh4_to_aica(tmp, cmd->size);
 
         /* Start both channels simultaneously */
-        cmd->cmd_id = (1 << streams[hnd].ch[0]) |
-                      (1 << streams[hnd].ch[1]);
+        start_sync = (1ull << streams[hnd].ch[0]) |
+                     (1ull << streams[hnd].ch[1]);
     }
     else {
         /* Start one channel */
-        cmd->cmd_id = (1 << streams[hnd].ch[0]);
+        start_sync = (1ull << streams[hnd].ch[0]);
     }
+
+    cmd->misc[0] = start_sync >> 32;
+    cmd->cmd_id = (uint32_t)start_sync;
 
     chan->cmd = AICA_CH_CMD_START | AICA_CH_START_SYNC;
     snd_sh4_to_aica(tmp, cmd->size);
