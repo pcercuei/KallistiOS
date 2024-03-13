@@ -28,6 +28,8 @@ __BEGIN_DECLS
 #include <arch/types.h>
 #include <stdint.h>
 
+#include "aica_comm.h"
+
 /** \defgroup audio_driver  Driver
     \brief                  Low-level driver for SPU and audio management
     \ingroup                audio
@@ -117,6 +119,13 @@ void snd_shutdown(void);
     \retval 0               On success (no error conditions defined).
 */
 int snd_sh4_to_aica(void *packet, uint32 size);
+
+/** \brief  Send a command to the AICA, and wait for a response.
+
+    \param  cmd             A pointer to the command to be sent.
+    \retval                 The return value sent by the AICA.
+*/
+int snd_sh4_to_aica_with_response(aica_cmd_t *cmd);
 
 /** \brief  Begin processing AICA queue requests.
 
