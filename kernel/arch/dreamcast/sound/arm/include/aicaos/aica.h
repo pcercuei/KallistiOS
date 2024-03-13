@@ -32,5 +32,8 @@ void aica_update(uint8_t chn, const struct aica_channel_data *data);
 void aica_start(uint8_t chn);
 void aica_stop(uint8_t chn);
 
+uint8_t aica_reserve_channel(void);
+void aica_unreserve_channel(uint8_t ch);
+
 #endif  /* __AICAOS_AICA_H */
 
