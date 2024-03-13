@@ -11,6 +11,8 @@
 #include <assert.h>
 #include <stdio.h>
 
+#include <kos/cond.h>
+#include <kos/mutex.h>
 #include <kos/sem.h>
 #include <arch/timer.h>
 #include <dc/aram.h>
@@ -35,6 +37,14 @@ extern uint8_t snd_stream_drv_end[];
 /* Thread semaphore */
 static semaphore_t sem_qram;
 
+/* Response semaphore */
+static mutex_t resp_lock = MUTEX_INITIALIZER;
+static condvar_t resp_cond = COND_INITIALIZER;
+
+static int wait_for_response;
+static int has_response;
+static int response;
+
 struct aica_header aica_header;
 
 static void snd_callback(uint32_t source, void *data)
@@ -56,6 +66,16 @@ static void snd_callback(uint32_t source, void *data)
             return;
 
         switch (pktcmd->cmd) {
+        case AICA_RESP:
+            mutex_lock(&resp_lock);
+
+            has_response = 1;
+            response = pktcmd->misc[0];
+
+            cond_broadcast(&resp_cond);
+            mutex_unlock(&resp_lock);
+            break;
+
         case AICA_RESP_DBGPRINT:
             str = aram_read_string(pktcmd->misc[0], buf + 2, sizeof(buf) - 8);
 
@@ -237,6 +257,36 @@ int snd_sh4_to_aica(void *packet, uint32_t size) {
     sem_signal(&sem_qram);
 
     return 0;
+}
+
+int snd_sh4_to_aica_with_response(aica_cmd_t *cmd)
+{
+    int resp;
+
+    mutex_lock(&resp_lock);
+
+    while (wait_for_response) {
+        /* There's already a thread waiting */
+        cond_wait(&resp_cond, &resp_lock);
+    }
+
+    wait_for_response = 1;
+    has_response = 0;
+
+    /* Send command */
+    snd_sh4_to_aica(cmd, cmd->size);
+
+    while (!has_response) {
+        /* Wait for our response */
+        cond_wait(&resp_cond, &resp_lock);
+    }
+
+    resp = response;
+    wait_for_response = 0;
+
+    mutex_unlock(&resp_lock);
+
+    return resp;
 }
 
 /* Start processing requests in the queue */

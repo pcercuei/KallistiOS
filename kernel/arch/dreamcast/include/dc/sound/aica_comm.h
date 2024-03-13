@@ -108,6 +108,7 @@ typedef struct aica_channel {
     \brief                    Values of responses to aica_cmd_t commands
     @{
  */
+#define AICA_RESP           0x00000000  /**< \brief Unspecified response */
 #define AICA_RESP_DBGPRINT  0x00000002  /**< \brief Payload is a C string */
 /** @} */
 
