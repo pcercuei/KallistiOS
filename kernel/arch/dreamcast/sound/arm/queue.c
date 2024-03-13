@@ -3,6 +3,7 @@
 #include "aica_registers.h"
 #include "aica.h"
 #include "irq.h"
+#include "mm.h"
 #include "lock.h"
 #include "queue.h"
 #include "task.h"
@@ -151,6 +152,35 @@ static void process_reserve(struct aica_header *header)
     send_response_code(header, ch);
 }
 
+static void process_mm(struct aica_header *header,
+                       uint32 cmd, uint32 arg0, uint32 arg1)
+{
+    unsigned int resp = 0;
+
+    switch (cmd & AICA_CMD_MM_MASK) {
+    case AICA_MM_MEMALIGN:
+        if (arg0 > 4)
+            resp = (unsigned int)aica_memalign(arg0, arg1);
+        else
+            resp = (unsigned int)aica_malloc(arg1);
+        break;
+    case AICA_MM_REALLOC:
+        resp = (unsigned int)aica_realloc((void *)arg0, arg1);
+        break;
+    case AICA_MM_AVAILABLE:
+        resp = aica_available();
+        break;
+    case AICA_MM_FREE:
+        aica_free((void *)arg0);
+        return;
+    default:
+        /* Unknown command */
+        return;
+    }
+
+    send_response_code(header, resp);
+}
+
 /* Process one packet of queue data */
 static uint32 process_one(struct aica_header *header, uint32 tail) {
     volatile struct aica_queue *q_cmd = header->cmd_queue;
@@ -188,6 +218,11 @@ static uint32 process_one(struct aica_header *header, uint32 tail) {
         case AICA_CMD_CHAN:
             process_chn(header, pkt, (aica_channel_t *)pkt->cmd_data);
             break;
+
+        case AICA_CMD_MM:
+            process_mm(header, pkt->cmd_id, pkt->misc[0], pkt->misc[1]);
+            break;
+
         default:
             /* error */
             break;

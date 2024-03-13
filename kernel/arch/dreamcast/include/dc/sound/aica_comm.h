@@ -101,8 +101,10 @@ typedef struct aica_channel {
     \brief                   Values of commands for aica_cmd_t
     @{
 */
+#define AICA_CMD_MM         0x00000000  /**< \brief Memory management routines */
 #define AICA_CMD_RESERVE    0x00000001  /**< \brief Reserve/unreserve a channel */
 #define AICA_CMD_CHAN       0x00000002  /**< \brief Perform a wavetable action   */
+
 /** @} */
 
 /** \defgroup audio_aica_resp Responses
@@ -144,6 +146,18 @@ typedef struct aica_channel {
 #define AICA_CH_UPDATE_SET_FREQ 0x00001000 /**< \brief frequency */
 #define AICA_CH_UPDATE_SET_VOL  0x00002000 /**< \brief volume*/
 #define AICA_CH_UPDATE_SET_PAN  0x00004000 /**< \brief panning */
+/** @} */
+
+/** \defgroup audio_aica_mm        Memory management routines
+    \brief                         Values for memory management routines
+    @{
+*/
+#define AICA_CMD_MM_MASK    0x0000f000     /**< \brief Mask for mm values */
+
+#define AICA_MM_MEMALIGN    0x00001000 /**< \brief memalign()/malloc() */
+#define AICA_MM_REALLOC     0x00002000 /**< \brief realloc() */
+#define AICA_MM_FREE        0x00004000 /**< \brief free() */
+#define AICA_MM_AVAILABLE   0x00008000 /**< \brief snd_mem_available() */
 /** @} */
 
 /** \defgroup audio_aica_samples Sample Types 
