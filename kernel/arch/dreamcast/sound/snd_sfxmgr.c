@@ -498,28 +498,33 @@ void snd_sfx_stop_all(void) {
 }
 
 int snd_sfx_chn_alloc(void) {
-    int old, chn;
+    aica_cmd_t cmd = {
+        .size = sizeof(cmd) / 4,
+        .cmd = AICA_CMD_RESERVE,
+	.misc[0] = (unsigned int)-1,
+    };
+    int chn, old;
+
+    chn = snd_sh4_to_aica_with_response(&cmd);
 
     old = irq_disable();
-
-    for(chn = 0; chn < 64; chn++)
-        if(!(sfx_inuse & (1 << chn)))
-            break;
-
-    if(chn >= 64)
-        chn = -1;
-    else
-        sfx_inuse |= 1 << chn;
-
+    sfx_inuse |= 1 << chn;
     irq_restore(old);
 
     return chn;
 }
 
 void snd_sfx_chn_free(int chn) {
+    aica_cmd_t cmd = {
+        .size = sizeof(cmd) / 4,
+        .cmd = AICA_CMD_RESERVE,
+        .misc[0] = chn,
+    };
     int old;
 
     old = irq_disable();
     sfx_inuse &= ~(1 << chn);
     irq_restore(old);
+
+    snd_sh4_to_aica(&cmd, sizeof(cmd) / 4);
 }
