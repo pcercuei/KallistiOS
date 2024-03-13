@@ -80,9 +80,23 @@ void process_chn(struct aica_header *header, aica_cmd_t *pkt, aica_channel_t *ch
     }
 }
 
+static void process_reserve(struct aica_header *header)
+{
+    unsigned char ch = aica_reserve_channel();
+
+    aica_send_response_code(header, ch);
+}
+
 void aica_process_command(struct aica_header *header, struct aica_cmd *cmd) {
     /* Figure out what type of packet it is */
     switch(cmd->cmd) {
+        case AICA_CMD_RESERVE:
+            if (cmd->misc[0] == (unsigned int)-1)
+                process_reserve(header);
+            else
+                aica_unreserve_channel(cmd->misc[0]);
+            break;
+
         case AICA_CMD_CHAN:
             process_chn(header, cmd, (aica_channel_t *)cmd->cmd_data);
             break;
