@@ -197,6 +197,14 @@ typedef void (*asic_evt_handler)(uint32_t code);
 */
 void asic_evt_set_handler(uint16_t code, asic_evt_handler handler);
 
+/** \brief   Unregister any handler set to the given ASIC event.
+    \ingroup asic
+
+    \param  code            The ASIC event code to unhook (see
+                            \ref asic_events).
+*/
+void asic_evt_remove_handler(uint16_t code);
+
 /** \brief   Disable all ASIC events.
     \ingroup asic
 

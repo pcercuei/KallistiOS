@@ -229,3 +229,8 @@ void asic_init(void) {
 void asic_shutdown(void) {
     asic_evt_shutdown();
 }
+
+void asic_evt_remove_handler(uint16_t code)
+{
+    asic_evt_set_handler(code, NULL);
+}
