@@ -68,6 +68,9 @@ void task_init(struct task *task, const char *name, void *func,
                unsigned int params[4], enum task_prio prio,
                unsigned int *stack, unsigned int stack_size);
 
+/* Wait until the given task completes */
+void task_join(struct task *task);
+
 /* Request a reschedule. */
 void task_reschedule(void);
 
