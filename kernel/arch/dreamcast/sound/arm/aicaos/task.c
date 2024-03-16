@@ -159,6 +159,7 @@ __noreturn void __task_exit(void)
                     tasks[i] = task->next;
 
                 task->state = TASK_DEAD;
+                task_wake(task, 1);
                 break;
             }
         }
@@ -256,6 +257,18 @@ void task_wake(void *obj, _Bool all)
                 break;
         }
     }
+
+    irq_restore(cxt);
+}
+
+void task_join(struct task *task)
+{
+    irq_ctx_t cxt;
+
+    cxt = irq_disable();
+
+    while (task->state != TASK_DEAD)
+        task_wait(task);
 
     irq_restore(cxt);
 }
