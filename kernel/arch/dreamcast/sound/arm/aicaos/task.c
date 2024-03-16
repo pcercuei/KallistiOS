@@ -159,6 +159,7 @@ __noreturn void __task_exit(void)
                     tasks[i] = task->next;
 
                 task->state = TASK_DEAD;
+                task_wake(task, 1);
                 break;
             }
         }
@@ -254,6 +255,14 @@ void task_wake(void *obj, _Bool all)
                 break;
         }
     }
+}
+
+void task_join(struct task *task)
+{
+    irq_disable_scoped();
+
+    while (task->state != TASK_DEAD)
+        task_wait(task);
 }
 
 static void task_set_prio(struct task *task, enum task_prio prio)
