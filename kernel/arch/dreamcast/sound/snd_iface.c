@@ -43,7 +43,9 @@ static void snd_callback(uint32_t source, void *data)
     uint32_t pkt[AICA_CMD_MAX_SIZE];
     aica_cmd_t *pktcmd = (aica_cmd_t *)pkt;
     uint32_t str_addr, size;
-    char buf[256];
+    unsigned int offt;
+    uint32_t buf[256];
+    char *str;
     int ret;
 
     (void)source;
@@ -54,6 +56,20 @@ static void snd_callback(uint32_t source, void *data)
             return;
 
         switch (pktcmd->cmd) {
+        case AICA_RESP_DBGPRINT:
+            str = aram_read_string(pktcmd->misc[0], buf + 2, sizeof(buf) - 8);
+
+            offt = (unsigned int)str - (unsigned int)buf;
+            ((char *)buf)[offt - 5] = 'A';
+            ((char *)buf)[offt - 4] = 'R';
+            ((char *)buf)[offt - 3] = 'M';
+            ((char *)buf)[offt - 2] = ':';
+            ((char *)buf)[offt - 1] = ' ';
+
+            dbglog(DBG_DEBUG, &((char *)buf)[offt - 5], pktcmd->misc[1],
+                   pktcmd->misc[2], pktcmd->misc[3]);
+            break;
+
         default:
             dbglog(DBG_DEBUG, "Unhandled command from ARM: %lu\n",
                    pktcmd->cmd);
