@@ -1,4 +1,4 @@
-OBJS := main.o
+OBJS := main.o s3m.o
 
 all: stream.drv
 

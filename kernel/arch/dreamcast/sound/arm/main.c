@@ -18,6 +18,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include "s3m.h"
+
 /****************** Main Program ************************************/
 
 /* Process a CHAN command */
@@ -131,6 +133,13 @@ void aica_process_command(struct aica_header *header, struct aica_cmd *cmd) {
 
         case AICA_CMD_MM:
             process_mm(header, cmd->cmd_id, cmd->misc[0], cmd->misc[1]);
+            break;
+
+        case AICA_CMD_S3MPLAY:
+            if (!cmd->misc[2])
+                s3m_play((struct s3m_header *)cmd->misc[0], cmd->misc[1]);
+            else
+                s3m_stop((struct s3m_header *)cmd->misc[0]);
             break;
 
         default:
