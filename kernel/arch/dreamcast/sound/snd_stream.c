@@ -16,6 +16,7 @@
 #include <malloc.h>
 #include <sys/queue.h>
 
+#include <kos/fs.h>
 #include <kos/mutex.h>
 #include <arch/cache.h>
 #include <arch/timer.h>
@@ -792,4 +793,37 @@ void snd_stream_volume(snd_stream_hnd_t hnd, int vol) {
 
     cmd->cmd_id = streams[hnd].ch[1];
     snd_sh4_to_aica(tmp, cmd->size);
+}
+
+int snd_s3m_load(const char *fn)
+{
+    file_t s3m;
+    void *tmp;
+
+    s3m = fs_open(fn, O_RDONLY);
+    if(s3m <= FILEHND_INVALID) {
+        dbglog(DBG_WARNING, "snd_s3m: can't open s3m %s\n", fn);
+        return -1;
+    }
+
+    size_t s3m_size = (fs_total(s3m) + 3) & ~0x3;
+    uint32_t ldaddr = snd_mem_malloc(s3m_size);
+
+    printf("Loading S3M file (%u bytes) at address 0x%lx\n", s3m_size, ldaddr);
+
+    tmp = malloc(s3m_size);
+    fs_read(s3m, tmp, s3m_size);
+    spu_memload_sq(ldaddr, tmp, s3m_size);
+    free(tmp);
+
+    aica_cmd_t cmd = {
+        .size = sizeof(cmd) / 4,
+        .cmd = AICA_CMD_S3MPLAY,
+        .misc[0] = ldaddr,
+        .misc[1] = 0,
+    };
+
+    snd_sh4_to_aica(&cmd, sizeof(cmd) / 4);
+
+    return 0;
 }
