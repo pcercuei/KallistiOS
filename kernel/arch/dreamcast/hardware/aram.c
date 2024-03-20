@@ -53,3 +53,49 @@ void aram_write(aram_addr_t addr, const void *src, size_t size)
 
     aram_copy(dst, (const char *)src, size);
 }
+
+static inline uint32_t has_eof(uint32_t dword)
+{
+    uint32_t ret = 0;
+
+    __asm__ __inline__("cmp/str %[ret], %[dword]\n\t"
+                       "movt %[ret]\n\t"
+                       : [ret]"+r"(ret) : [dword]"r"(dword));
+
+    return ret;
+}
+
+char *aram_read_string(aram_addr_t addr, uint32_t *dst, size_t size)
+{
+    const uint32_t *src;
+    uint32_t value, cnt = 0;
+    char *ret = (char *)dst;
+    g2_ctx_t ctx;
+
+    if (addr & 0x3) {
+        ret += 4 - (addr & 0x3);
+        addr &= ~0x3;
+    }
+
+    src = (const uint32_t *)aram_addr_to_host(addr);
+
+    ctx = g2_lock();
+
+    for (; size >= 4; size -= 4) {
+        /* Fifo wait if necessary */
+        if (!(cnt % 8))
+            g2_fifo_wait();
+
+        value = *src++;
+        *dst++ = value;
+
+        if (has_eof(value))
+            break;
+
+        cnt++;
+    }
+
+    g2_unlock(ctx);
+
+    return ret;
+}

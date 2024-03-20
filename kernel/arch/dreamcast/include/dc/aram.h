@@ -61,6 +61,8 @@ static inline void aram_write_32(aram_addr_t addr, uint32_t val)
 void aram_read(void *out, aram_addr_t addr, size_t size);
 void aram_write(aram_addr_t dst, const void *src, size_t size);
 
+char *aram_read_string(aram_addr_t addr, uint32_t *dst, size_t size);
+
 __END_DECLS
 
 #endif  /* __DC_ARAM_H */
