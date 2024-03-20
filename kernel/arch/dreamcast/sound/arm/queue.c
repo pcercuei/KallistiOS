@@ -6,6 +6,7 @@
 #include "mm.h"
 #include "lock.h"
 #include "queue.h"
+#include "s3m.h"
 #include "task.h"
 
 #include <stdarg.h>
@@ -221,6 +222,13 @@ static uint32 process_one(struct aica_header *header, uint32 tail) {
 
         case AICA_CMD_MM:
             process_mm(header, pkt->cmd_id, pkt->misc[0], pkt->misc[1]);
+            break;
+
+        case AICA_CMD_S3MPLAY:
+            if (!pkt->misc[1])
+                s3m_play((struct s3m_header *)pkt->misc[0]);
+            else
+                s3m_stop((struct s3m_header *)pkt->misc[0]);
             break;
 
         default:
