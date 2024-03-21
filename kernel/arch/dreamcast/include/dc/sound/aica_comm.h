@@ -105,6 +105,7 @@ typedef struct aica_channel {
 #define AICA_CMD_RESERVE    0x00000001  /**< \brief Reserve/unreserve a channel */
 #define AICA_CMD_CHAN       0x00000002  /**< \brief Perform a wavetable action   */
 #define AICA_CMD_S3MPLAY    0x00000003  /**< \brief Play/stop S3M file */
+#define AICA_CMD_INFO       0x00000004  /**< \brief Get tasks accounting info */
 
 /** @} */
 
