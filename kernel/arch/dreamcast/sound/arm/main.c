@@ -18,6 +18,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+static union {
+    unsigned int _info_buf[0x400];
+    struct aica_tasks_info info;
+} tasks_info;
+
 /****************** Main Program ************************************/
 
 /* Process a CHAN command */
@@ -131,6 +136,11 @@ void aica_process_command(struct aica_header *header, struct aica_cmd *cmd) {
 
         case AICA_CMD_MM:
             process_mm(header, cmd->cmd_id, cmd->misc[0], cmd->misc[1]);
+            break;
+
+        case AICA_CMD_INFO:
+            task_fill_info(&tasks_info.info);
+            aica_send_response_code(header, (unsigned int)&tasks_info);
             break;
 
         default:
