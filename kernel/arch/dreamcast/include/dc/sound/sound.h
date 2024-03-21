@@ -249,6 +249,8 @@ uint16_t snd_get_pos(unsigned int ch);
 */
 bool snd_is_playing(unsigned int ch);
 
+void snd_print_aica_info(void);
+
 __END_DECLS
 
 #endif  /* __DC_SOUND_SOUND_H */

@@ -362,3 +362,30 @@ uint16_t snd_get_pos(unsigned int ch) {
 bool snd_is_playing(unsigned int ch) {
     return g2_read_32(MEM_AREA_P2_BASE + 0x00700000 + 0x80 * ch) & AICA_CHANNEL_KEYONB;
 }
+
+void snd_print_aica_info(void) {
+    struct aica_tasks_info info;
+    struct aica_task_info tinfo;
+    aram_addr_t addr;
+    aica_cmd_t cmd = {
+        .size = sizeof(cmd) / 4,
+        .cmd = AICA_CMD_INFO,
+    };
+    unsigned int i;
+    uint32_t buf[64];
+    char *str;
+
+    addr = snd_sh4_to_aica_with_response(&cmd);
+
+    aram_read(&info, addr, sizeof(info));
+    addr += sizeof(info);
+
+    for (i = 0; i < info.nb_tasks; i++) {
+        aram_read(&tinfo, addr, sizeof(tinfo));
+        addr += sizeof(tinfo);
+
+        str = aram_read_string((aram_addr_t)tinfo.name, buf, sizeof(buf));
+        dbglog(DBG_DEBUG, "%s: %.02f%%\n", str,
+               (float)(tinfo.cpu_time * 100) / (float)(info.total_cpu_time));
+    }
+}
