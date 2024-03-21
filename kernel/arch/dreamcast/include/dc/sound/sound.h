@@ -226,6 +226,8 @@ void snd_adpcm_split(uint32_t *data, uint32_t *left, uint32_t *right, size_t siz
 
 /** @} */
 
+void snd_print_aica_info(void);
+
 __END_DECLS
 
 #endif  /* __DC_SOUND_SOUND_H */
