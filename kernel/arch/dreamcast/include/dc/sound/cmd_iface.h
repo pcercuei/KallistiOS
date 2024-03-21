@@ -27,4 +27,15 @@ extern struct aica_header aica_header;
 /* The address of the firmware header will be placed at that address */
 #define AICA_HEADER_ADDR    0x1ffffc
 
+struct aica_task_info {
+    const char *name;
+    unsigned int cpu_time;
+};
+
+struct aica_tasks_info {
+    unsigned int nb_tasks;
+    unsigned int total_cpu_time;
+    struct aica_task_info info[];
+};
+
 #endif  /* __ARM_AICA_CMD_IFACE_H */
