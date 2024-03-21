@@ -9,12 +9,15 @@
 #include <aicaos/aica.h>
 #include <aicaos/irq.h>
 #include <aicaos/task.h>
+#include <cmd_iface.h>
 #include <stddef.h>
 
 static unsigned char counter_channel;
 
 static struct task idle_task;
 struct task *current_task;
+
+static unsigned int total_cpu_time;
 
 static unsigned short last_pos;
 static unsigned int task_counter = 0;
@@ -124,6 +127,9 @@ __noreturn void __task_reschedule(_Bool skip_me)
     ticks = counter - last_pos;
     last_pos = counter;
 
+    current_task->cpu_time += ticks;
+    total_cpu_time += ticks;
+
     /* Wake up sleeping tasks, and program next wakeup */
     task_wakeup(ticks);
     task_program_next_wakeup();
@@ -191,6 +197,8 @@ void task_init(struct task *task, const char *name, void *func,
     task->awaken = 0;
     task->prio = prio;
     task->real_prio = prio;
+    task->cpu_time = 0;
+    task->old_cpu_time = 0;
 
     irq_disable_scoped();
 
@@ -311,4 +319,27 @@ ticks_t task_get_cputime(void)
     ticks = counter - last_pos;
 
     return current_task->cpu_time + ticks;
+}
+
+void task_fill_info(struct aica_tasks_info *info)
+{
+    struct task *task;
+    unsigned int i;
+
+    irq_disable_scoped();
+
+    info->nb_tasks = 0;
+    info->total_cpu_time = total_cpu_time;
+
+    total_cpu_time = 0;
+
+    for (i = 0; i < TASK_PRIO_COUNT; i++) {
+        for (task = tasks[i]; task; task = task->next) {
+            info->info[info->nb_tasks].name = task->name;
+            info->info[info->nb_tasks++].cpu_time =
+                task->cpu_time - task->old_cpu_time;
+
+            task->old_cpu_time = task->cpu_time;
+        }
+    }
 }

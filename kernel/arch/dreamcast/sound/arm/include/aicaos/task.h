@@ -8,6 +8,8 @@
 /* 1764 ticks of the 44100 Hz clock == 25 Hz */
 #define DEFAULT_TIMEOUT_WAKEUP 1764
 
+struct aica_tasks_info;
+
 typedef unsigned int ticks_t;
 
 struct context {
@@ -47,6 +49,7 @@ struct task {
     enum task_state state;
     const char *name;
     enum task_prio prio, real_prio;
+    unsigned int cpu_time, old_cpu_time;
 };
 
 /* Pointer to the current task */
@@ -118,5 +121,7 @@ void task_boost(struct task *task);
 
 /* Unboost the current task's priority. */
 void task_unboost(void);
+
+void task_fill_info(struct aica_tasks_info *info);
 
 #endif
