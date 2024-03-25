@@ -12,6 +12,7 @@
 
 #include <aicaos/aica.h>
 #include <cmd_iface.h>
+#include <stddef.h>
 
 /****************** Timer *******************************************/
 
@@ -22,20 +23,6 @@ void timer_wait(uint32 jiffies) {
 
     while(timer <= fin)
         ;
-}
-
-/****************** Tiny Libc ***************************************/
-
-#include <stddef.h>
-
-void * memcpy(void *dest, const void *src, size_t count) {
-    unsigned char *tmp = (unsigned char *) dest;
-    unsigned char *s = (unsigned char *) src;
-
-    while(count--)
-        *tmp++ = *s++;
-
-    return dest;
 }
 
 /****************** Main Program ************************************/
