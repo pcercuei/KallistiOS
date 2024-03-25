@@ -15,9 +15,8 @@
 #include <arch/timer.h>
 #include <dc/g2bus.h>
 #include <dc/spu.h>
+#include <dc/sound/cmd_iface.h>
 #include <dc/sound/sound.h>
-
-#include "arm/aica_cmd_iface.h"
 
 /* Are we initted? */
 static int initted = 0;
