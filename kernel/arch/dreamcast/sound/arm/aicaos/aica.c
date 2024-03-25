@@ -6,9 +6,9 @@
    ARM support routines for using the wavetable channels
 */
 
+#include <aicaos/aica.h>
 #include <cmd_iface.h>
 #include <registers.h>
-#include "aica.h"
 
 void aica_init(void) {
     int i, j;

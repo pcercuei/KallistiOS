@@ -1,3 +1,4 @@
+#include <aicaos/aica.h>
 #include <cmd_iface.h>
 #include <stddef.h>
 
@@ -32,6 +33,9 @@ struct aica_header aica_header = {
 /* Initialize the OS */
 void arm_main(void)
 {
+    /* Initialize the AICA part of the SPU */
+    aica_init();
+
     aica_header.buffer_size =
         (unsigned int)&__heap_end - (unsigned int)&__heap_start;
 

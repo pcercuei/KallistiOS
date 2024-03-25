@@ -10,8 +10,8 @@
 
 */
 
+#include <aicaos/aica.h>
 #include <cmd_iface.h>
-#include "aica.h"
 
 /****************** Timer *******************************************/
 
@@ -198,9 +198,6 @@ int main(int argc, char **argv) {
     q_resp->size = AICA_MEM_CHANNELS - q_resp->data;
     q_resp->process_ok = 1;
     q_resp->valid = 1;
-
-    /* Initialize the AICA part of the SPU */
-    aica_init();
 
     /* Wait for a command */
     for(; ;) {

@@ -1,4 +1,4 @@
-OBJS := main.o aica.o
+OBJS := main.o
 
 all: stream.drv
 
