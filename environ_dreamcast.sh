@@ -42,7 +42,7 @@ if [ x${KOS_ARCH} = xdreamcast ]; then
 	export DC_ARM_AR="${DC_ARM_BASE}/bin/${DC_ARM_PREFIX}-ar"
 	export DC_ARM_OBJCOPY="${DC_ARM_BASE}/bin/${DC_ARM_PREFIX}-objcopy"
 	export DC_ARM_LD="${DC_ARM_BASE}/bin/${DC_ARM_PREFIX}-ld"
-	export DC_ARM_CFLAGS="-mcpu=arm7di -Wall -O2 -fno-strict-aliasing -Wl,--fix-v4bx -Wa,--fix-v4bx"
+	export DC_ARM_CFLAGS="-mcpu=arm7di -Wall -O2 -fno-strict-aliasing -Wl,--fix-v4bx -Wa,--fix-v4bx -I ${KOS_BASE}/kernel/arch/dreamcast/sound/arm/include"
 	export DC_ARM_AFLAGS="-mcpu=arm7di --fix-v4bx"
 	export DC_ARM_MAKE="make"
 	export DC_ARM_START="${KOS_ARCH_DIR}/sound/arm/crt0.s"
