@@ -7,7 +7,7 @@
 
 build: build-sh4-done build-arm
 build-sh4: build-sh4-gcc
-build-arm: build-arm-gcc
+build-arm: build-arm-gcc build-arm-aicaos
 build-sh4-gcc: build-sh4-gcc-pass2
 build-arm-gcc: build-arm-gcc-pass1
 build-sh4-newlib: build-sh4-newlib-only fixup-sh4-newlib
@@ -30,7 +30,7 @@ build-sh4-done: build-sh4
 # Ensure that, no matter where we enter, prefix and target are set correctly.
 build_sh4_targets = build-sh4-binutils build-sh4-gcc build-sh4-gcc-pass1 \
                     build-sh4-newlib build-sh4-newlib-only build-sh4-gcc-pass2
-build_arm_targets = build-arm-binutils build-arm-gcc build-arm-gcc-pass1
+build_arm_targets = build-arm-binutils build-arm-gcc build-arm-gcc-pass1 build-arm-aicaos build-arm-libc
 
 # Available targets for SH
 $(build_sh4_targets): prefix = $(sh_prefix)
@@ -52,9 +52,52 @@ build-sh4-binutils: fetch-sh-binutils
 build-sh4-gcc-pass1 build-sh4-gcc-pass2: fetch-sh-gcc
 build-sh4-newlib-only: fetch-newlib
 
+arm_libc := $(kos_base)/kernel/arch/dreamcast/sound/arm/libc
+arm_aicaos := $(kos_base)/kernel/arch/dreamcast/sound/arm/aicaos
+
 # ARM Download Dependencies
 build-arm-binutils: fetch-arm-binutils
 build-arm-gcc-pass1: fetch-arm-gcc
+
+build-arm-aicaos/%.o: $(arm_aicaos)/%.c build-arm-gcc
+	mkdir -p $(dir $@)
+	$(DESTDIR)/$(arm_prefix)/bin/arm-eabi-gcc -mcpu=arm7di -Wl,--fix-v4bx -c $< -o $@ \
+		-I $(kos_base)/kernel/arch/dreamcast/include/dc/sound -I $(arm_aicaos)/../include
+
+build-arm-aicaos/%.o: $(arm_aicaos)/%.s build-arm-gcc
+	mkdir -p $(dir $@)
+	$(DESTDIR)/$(arm_prefix)/bin/arm-eabi-as --fix-v4bx $< -o $@
+
+build-arm-aicaos/libaicaos.a: \
+	$(patsubst $(arm_aicaos)/%.c,build-arm-aicaos/%.o,$(wildcard $(arm_aicaos)/*.c)) \
+	$(patsubst $(arm_aicaos)/%.s,build-arm-aicaos/%.o,$(wildcard $(arm_aicaos)/*.s))
+	$(DESTDIR)/$(arm_prefix)/bin/arm-eabi-ar rcs $@ $^
+
+$(DESTDIR)/$(arm_prefix)/$(arm_target)/lib/crt0.o: build-arm-aicaos/libaicaos.a
+	$(DESTDIR)/$(arm_prefix)/bin/arm-eabi-gcc -r -nostartfiles -nostdlib -Wl,--whole-archive $< -o $@
+
+build-arm-aicaos: $(DESTDIR)/$(arm_prefix)/$(arm_target)/lib/crt0.o
+
+build-arm-libc/%.o: $(arm_libc)/%.c build-arm-aicaos
+	mkdir -p $(dir $@)
+	$(DESTDIR)/$(arm_prefix)/bin/arm-eabi-gcc -mcpu=arm7di -Wl,--fix-v4bx -c $< -o $@ \
+		-I $(kos_base)/kernel/arch/dreamcast/include/dc/sound -I $(arm_libc)/../include
+
+$(DESTDIR)/$(arm_prefix)/$(arm_target)/lib/libc.a: $(patsubst $(arm_libc)/%.c,build-arm-libc/%.o,$(wildcard $(arm_libc)/*.c))
+	$(DESTDIR)/$(arm_prefix)/bin/arm-eabi-ar rcs $(DESTDIR)/$(arm_prefix)/$(arm_target)/lib/libc.a $^
+
+$(DESTDIR)/$(arm_prefix)/$(arm_target)/include/%.h: $(arm_libc)/../include/%.h
+	mkdir -p $(dir $@)
+	$(shell which install) -m0644 $< $@
+
+# ARM libc dependencies
+build-arm-libc: build-arm-aicaos $(DESTDIR)/$(arm_prefix)/$(arm_target)/lib/libc.a
+
+# Install headers
+build-arm-libc: \
+	$(patsubst $(arm_libc)/../include/%.h, \
+	$(DESTDIR)/$(arm_prefix)/$(arm_target)/include/%.h, \
+	$(shell $(shell which find) $(arm_libc)/../include -type f))
 
 # GDB Patch Dependency
 build_gdb: patch_gdb
