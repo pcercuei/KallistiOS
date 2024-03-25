@@ -1,14 +1,15 @@
-/* KallistiOS ##version##
+/*
+   AICAOS
 
    aica.c
-   (c)2000-2002 Megan Potter
-   (c)2024 Stefanos Kornilios Mitsis Poiitidis
+   Copyright (C) 2000-2002 Megan Potter
+   Copyright (C) 2024 Stefanos Kornilios Mitsis Poiitidis
+   Copyright (C) 2025 Paul Cercueil
 
    ARM support routines for using the wavetable channels
 */
 
-#include "aica_cmd_iface.h"
-#include "aica.h"
+#include <aicaos/aica.h>
 
 extern volatile aica_channel_t *chans;
 

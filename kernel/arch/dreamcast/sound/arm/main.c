@@ -10,11 +10,12 @@
 
 */
 
-#include "aica_cmd_iface.h"
-#include "aica.h"
+#include <aicaos/aica.h>
 
 #include <stddef.h>
 #include <string.h>
+
+#include "aica_cmd_iface.h"
 
 extern volatile unsigned int timer;
 

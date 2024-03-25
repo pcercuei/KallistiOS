@@ -1,5 +1,20 @@
-#ifndef __AICA_H
-#define __AICA_H
+/*
+   AICAOS
+
+   aica.h
+   Copyright (C) 2000-2002 Megan Potter
+   Copyright (C) 2024 Stefanos Kornilios Mitsis Poiitidis
+   Copyright (C) 2025 Paul Cercueil
+
+   ARM support routines for using the wavetable channels
+*/
+
+#ifndef __AICAOS_AICA_H
+#define __AICAOS_AICA_H
+
+#include "../aica_cmd_iface.h"
+
+#include <stdint.h>
 
 /* volatile unsigned char *dc_snd_base = (unsigned char *)0x00800000; */
 #define dc_snd_base ((volatile unsigned char *)0x00800000)
@@ -23,5 +38,5 @@ void aica_pan(int ch);
 void aica_freq(int ch);
 int aica_get_pos(int ch);
 
-#endif  /* __AICA_H */
+#endif  /* __AICAOS_AICA_H */
 
