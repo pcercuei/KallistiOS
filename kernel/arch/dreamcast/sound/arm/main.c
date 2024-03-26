@@ -160,7 +160,7 @@ void process_cmd_queue(void) {
     }
 }
 
-int arm_main(void) {
+int main(int argc, char **argv) {
     int i;
 
     /* Setup our queues */
