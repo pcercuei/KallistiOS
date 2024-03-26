@@ -11,6 +11,10 @@ void aica_notify_queue(void);
  * define it to process the commands sent by the SH4. */
 void aica_process_command(struct aica_header *header, struct aica_cmd *cmd);
 
+/* Answer a given command.
+ * This should be called from aica_process_command(). */
+void aica_send_response_code(struct aica_header *header, unsigned int code);
+
 /* Add a command to the output queue. */
 void aica_add_cmd(const struct aica_cmd *cmd);
 

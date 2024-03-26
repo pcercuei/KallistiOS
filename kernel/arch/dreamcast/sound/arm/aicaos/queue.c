@@ -45,6 +45,17 @@ void aica_do_add_cmd(struct aica_header *header, const struct aica_cmd *cmd) {
     aica_interrupt();
 }
 
+void aica_send_response_code(struct aica_header *header, unsigned int code)
+{
+    struct aica_cmd cmd = {
+        .size = sizeof(struct aica_cmd) / 4,
+        .cmd = AICA_RESP,
+        .misc[0] = code,
+    };
+
+    aica_do_add_cmd(header, &cmd);
+}
+
 void aica_add_cmd(const struct aica_cmd *cmd) {
     aica_do_add_cmd(&aica_header, cmd);
 }
