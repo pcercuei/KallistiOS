@@ -75,6 +75,18 @@ void process_chn(struct aica_header *header, aica_cmd_t *pkt, aica_channel_t *ch
     }
 }
 
+void aica_process_command(aica_cmd_t *cmd) {
+    /* Figure out what type of packet it is */
+    switch(pkt->cmd) {
+        case AICA_CMD_CHAN:
+            process_chn(header, pkt, (aica_channel_t *)pkt->cmd_data);
+            break;
+        default:
+            /* error */
+            break;
+    }
+}
+
 /* Process one packet of queue data */
 uint32 process_one(struct aica_header *header, uint32 tail) {
     volatile struct aica_queue *q_cmd = header->cmd_queue;
@@ -100,15 +112,7 @@ uint32 process_one(struct aica_header *header, uint32 tail) {
             src = (volatile uint32 *)q_cmd->data;
     }
 
-    /* Figure out what type of packet it is */
-    switch(pkt->cmd) {
-        case AICA_CMD_CHAN:
-            process_chn(header, pkt, (aica_channel_t *)pkt->cmd_data);
-            break;
-        default:
-            /* error */
-            break;
-    }
+    aica_process_command(pkt);
 
     return size;
 }
