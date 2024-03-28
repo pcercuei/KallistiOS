@@ -8,6 +8,7 @@
 extern int main(int argc, char **argv);
 
 extern unsigned char __heap_start, __heap_end;
+extern unsigned int __init_table_start, __init_table_end;
 
 static struct task main_task;
 static unsigned int main_task_stack[0x400];
@@ -40,7 +41,7 @@ struct aica_header aica_header = {
 /* Initialize the OS */
 void arm_main(void)
 {
-    unsigned int args[4] = { 0 };
+    unsigned int i, *init_fn, args[4] = { 0 };
 
     /* Initialize the AICA part of the SPU */
     aica_init();
@@ -48,6 +49,10 @@ void arm_main(void)
     aica_interrupt_init();
     aica_init_tasks();
     aica_init_queue(&aica_header);
+
+    /* Run constructors */
+    for (init_fn = &__init_table_start; init_fn != &__init_table_end; init_fn++)
+        ((void (*)(void))*init_fn)();
 
     aica_header.buffer_size =
         (unsigned int)&__heap_end - (unsigned int)&__heap_start;
