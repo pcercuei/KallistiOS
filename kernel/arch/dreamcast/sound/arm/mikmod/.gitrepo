@@ -1,0 +1,12 @@
+; DO NOT EDIT (unless you know what you are doing)
+;
+; This subdirectory is a git "subrepo", and this file is maintained by the
+; git-subrepo command. See https://github.com/ingydotnet/git-subrepo#readme
+;
+[subrepo]
+	remote = https://git.code.sf.net/p/mikmod/mikmod
+	branch = master
+	commit = 323bca5511e1cd1ab1421fad6f0c3c88b1352e68
+	parent = db3a691bd80b4bb3846e4a09022e99c00ff8caae
+	method = merge
+	cmdver = 0.4.6
