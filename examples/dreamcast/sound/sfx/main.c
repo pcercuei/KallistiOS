@@ -26,6 +26,8 @@ static void draw_instructions(uint8_t volume);
 static cont_state_t *get_cont_state();
 static int button_pressed(uint32_t current_buttons, uint32_t changed_buttons, uint32_t button);
 
+int snd_s3m_load(const char *fn);
+
 int main(int argc, char **argv) {
     uint8_t volume = 128;
     int volume_changed = 1;
@@ -42,6 +44,10 @@ int main(int argc, char **argv) {
     sfxhnd_t beep2 = snd_sfx_load("/rd/beep-2.wav");
     sfxhnd_t beep3 = snd_sfx_load("/rd/beep-3.wav");
     sfxhnd_t beep4 = snd_sfx_load("/rd/beep-4.wav");
+
+    snd_s3m_load("/rd/music.s3m");
+
+    printf("S3M loaded properly.\n");
 
     uint32_t current_buttons = 0;
     uint32_t changed_buttons = 0;
