@@ -3,6 +3,10 @@
 
 #include <stddef.h>
 
+#define RAND_MAX 32767
+
+int rand(void);
+
 void * malloc(size_t size);
 void * calloc(size_t nb, size_t size);
 void * realloc(void *ptr, unsigned int size);
