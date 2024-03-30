@@ -1,5 +1,47 @@
+MIKMOD_DIR := $(KOS_BASE)/kernel/arch/dreamcast/sound/arm/mikmod/libmikmod
+
+MIKMOD_OBJS := $(MIKMOD_DIR)/loaders/load_669.o	\
+               $(MIKMOD_DIR)/loaders/load_amf.o	\
+               $(MIKMOD_DIR)/loaders/load_asy.o	\
+               $(MIKMOD_DIR)/loaders/load_dsm.o	\
+               $(MIKMOD_DIR)/loaders/load_far.o	\
+               $(MIKMOD_DIR)/loaders/load_gdm.o	\
+               $(MIKMOD_DIR)/loaders/load_gt2.o	\
+               $(MIKMOD_DIR)/loaders/load_it.o	\
+               $(MIKMOD_DIR)/loaders/load_imf.o	\
+               $(MIKMOD_DIR)/loaders/load_m15.o	\
+               $(MIKMOD_DIR)/loaders/load_med.o	\
+               $(MIKMOD_DIR)/loaders/load_mod.o	\
+               $(MIKMOD_DIR)/loaders/load_mtm.o	\
+               $(MIKMOD_DIR)/loaders/load_okt.o	\
+               $(MIKMOD_DIR)/loaders/load_s3m.o	\
+               $(MIKMOD_DIR)/loaders/load_stm.o	\
+               $(MIKMOD_DIR)/loaders/load_stx.o	\
+               $(MIKMOD_DIR)/loaders/load_ult.o	\
+               $(MIKMOD_DIR)/loaders/load_umx.o	\
+               $(MIKMOD_DIR)/loaders/load_uni.o	\
+               $(MIKMOD_DIR)/loaders/load_xm.o	\
+               $(MIKMOD_DIR)/depackers/mmcmp.o	\
+               $(MIKMOD_DIR)/depackers/pp20.o	\
+               $(MIKMOD_DIR)/depackers/s404.o	\
+               $(MIKMOD_DIR)/depackers/xpk.o	\
+               $(MIKMOD_DIR)/mmio/mmalloc.o	\
+               $(MIKMOD_DIR)/mmio/mmerror.o	\
+               $(MIKMOD_DIR)/mmio/mmio.o		\
+               $(MIKMOD_DIR)/posix/strcasecmp.o	\
+               $(MIKMOD_DIR)/playercode/mdreg.o	\
+               $(MIKMOD_DIR)/playercode/mdriver.o	\
+               $(MIKMOD_DIR)/playercode/mloader.o	\
+               $(MIKMOD_DIR)/playercode/mlreg.o	\
+               $(MIKMOD_DIR)/playercode/mlutil.o	\
+               $(MIKMOD_DIR)/playercode/mplayer.o	\
+               $(MIKMOD_DIR)/playercode/munitrk.o	\
+               $(MIKMOD_DIR)/playercode/mwav.o	\
+               $(MIKMOD_DIR)/playercode/npertab.o	\
+               $(MIKMOD_DIR)/playercode/sloader.o
+
 TARGET = stream.drv
-OBJS = main.o
+OBJS := $(MIKMOD_OBJS) main.o player.o
 
 .PHONY: all clean aicaos
 
@@ -37,6 +79,8 @@ prog.elf: $(OBJS)
 	$(CC) $(LDFLAGS) $^ $(LDLIBS) -o $@
 
 $(OBJS): aicaos
+
+$(MIKMOD_OBJS) player.o: DC_ARM_CFLAGS += -I$(MIKMOD_DIR)/include -DHAVE_LIMITS_H -DHAVE_POSIX_MEMALIGN
 
 clean-aicaos:
 	$(MAKE) -C aicaos clean

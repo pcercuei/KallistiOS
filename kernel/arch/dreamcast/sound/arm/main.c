@@ -23,6 +23,8 @@
 #include <aicaos/stdio.h>
 #include <aicaos/task.h>
 
+#include "player.h"
+
 static union {
     unsigned int _info_buf[0x400];
     struct aica_tasks_info info;
@@ -148,6 +150,14 @@ void aica_process_command(struct aica_header *header, struct aica_cmd *cmd) {
             task_fill_info(&tasks_info.info);
             aica_send_response_code(header, (unsigned int)&tasks_info);
             break;
+
+        case AICA_CMD_S3MPLAY:
+            if (!cmd->misc[2])
+                s3m_play((struct s3m_header *)cmd->misc[0], cmd->misc[1]);
+            else
+                s3m_stop((struct s3m_header *)cmd->misc[0]);
+            break;
+
 
         default:
             /* error */
