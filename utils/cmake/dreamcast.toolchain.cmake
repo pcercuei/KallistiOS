@@ -10,6 +10,10 @@
 #
 #     cmake /path/to/src -DCMAKE_TOOLCHAIN_FILE=${KOS_CMAKE_TOOLCHAIN}
 #
+#   or even:
+#
+#     kos-cmake /path/to/src
+#
 # Frame pointers are enabled in debug builds as these are required for 
 # stack traces and GDB. They are disabled in release.
 # 
@@ -19,36 +23,16 @@
 cmake_minimum_required(VERSION 3.23)
 
 #### Set Configuration Variables From Environment ####
-if(NOT DEFINED KOS_BASE)
-    if(NOT DEFINED ENV{KOS_BASE})
-        message(FATAL_ERROR "Variable KOS_BASE not set and was not found in the environment")
-    endif()
+if(NOT DEFINED ENV{KOS_BASE}
+   OR NOT DEFINED ENV{KOS_CC_BASE}
+   OR NOT DEFINED ENV{KOS_SUBARCH}
+   OR NOT DEFINED ENV{KOS_PORTS})
+    message(FATAL_ERROR "KallistiOS environment variables not found")
+else()
     set(KOS_BASE $ENV{KOS_BASE})
-    message(VERBOSE "KOS_BASE: ${KOS_BASE}")
-endif()
-
-if(NOT DEFINED KOS_CC_BASE)
-    if(NOT DEFINED ENV{KOS_CC_BASE})
-        message(FATAL_ERROR "Variable KOS_CC_BASE not set and was not found in the environment")
-    endif()
     set(KOS_CC_BASE $ENV{KOS_CC_BASE})
-    message(VERBOSE "KOS_CC_BASE: ${KOS_CC_BASE}")
-endif()
-
-if(NOT DEFINED KOS_SUBARCH)
-    if(NOT DEFINED ENV{KOS_SUBARCH})
-        message(FATAL_ERROR "Variable KOS_SUBARCH not set and was not found in the environment")
-    endif()
     set(KOS_SUBARCH $ENV{KOS_SUBARCH})
-    message(VERBOSE "KOS_SUBARCH: ${KOS_SUBARCH}")
-endif()
-
-if(NOT DEFINED KOS_PORTS)
-    if(NOT DEFINED ENV{KOS_PORTS})
-        message(FATAL_ERROR "Variable KOS_PORTS not set and was not found in the environment")
-    endif()
     set(KOS_PORTS $ENV{KOS_PORTS})
-    message(VERBOSE "KOS_PORTS: ${KOS_PORTS}")
 endif()
 
 list(APPEND CMAKE_MODULE_PATH $ENV{KOS_BASE}/utils/cmake)
@@ -62,11 +46,11 @@ set(PLATFORM_DREAMCAST TRUE)
 ##### Configure Cross-Compiler #####
 set(CMAKE_CROSSCOMPILING TRUE)
 
-set(CMAKE_ASM_COMPILER    ${KOS_CC_BASE}/bin/sh-elf-as)
-set(CMAKE_C_COMPILER      ${KOS_CC_BASE}/bin/sh-elf-gcc)
-set(CMAKE_CXX_COMPILER    ${KOS_CC_BASE}/bin/sh-elf-g++)
-set(CMAKE_OBJC_COMPILER   ${KOS_CC_BASE}/bin/sh-elf-gcc)
-set(CMAKE_OBJCXX_COMPILER ${KOS_CC_BASE}/bin/sh-elf-g++)
+set(CMAKE_ASM_COMPILER    ${KOS_BASE}/utils/gnu_wrappers/kos-as)
+set(CMAKE_C_COMPILER      ${KOS_BASE}/utils/gnu_wrappers/kos-cc)
+set(CMAKE_CXX_COMPILER    ${KOS_BASE}/utils/gnu_wrappers/kos-c++)
+set(CMAKE_OBJC_COMPILER   ${KOS_BASE}/utils/gnu_wrappers/kos-cc)
+set(CMAKE_OBJCXX_COMPILER ${KOS_BASE}/utils/gnu_wrappers/kos-c++)
 
 set(CMAKE_FIND_LIBRARY_SUFFIXES ".a")
 
@@ -76,18 +60,6 @@ set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER)
 # Set sysroot to kos-ports folder
 set(CMAKE_SYSROOT ${KOS_PORTS})
 set(ENV{PKG_CONFIG_SYSROOT_DIR} ${KOS_PORTS})
-
-##### Add Platform-Specific #defines #####
-add_compile_definitions(__DREAMCAST__ _arch_dreamcast)
-
-if(${KOS_SUBARCH} MATCHES naomi)
-    add_compile_definitions(__NAOMI__ _arch_sub_naomi)
-else()
-    add_compile_definitions(_arch_sub_pristine)
-endif()
-
-##### Configure Build Flags #####
-add_compile_options(-ml -m4-single-only -ffunction-sections -fdata-sections -matomic-model=soft-imask -ftls-model=local-exec)
 
 set(ENABLE_DEBUG_FLAGS   $<OR:$<CONFIG:Debug>,$<CONFIG:RelWithDebInfo>>)
 set(ENABLE_RELEASE_FLAGS $<OR:$<CONFIG:Release>,$<CONFIG:MinSizeRel>>)
@@ -99,42 +71,5 @@ add_compile_options(
 
 set(CMAKE_ASM_FLAGS "")
 set(CMAKE_ASM_FLAGS_RELEASE "")
-
-##### Configure Include Directories #####
-set(CMAKE_SYSTEM_INCLUDE_PATH "${CMAKE_SYSTEM_INCLUDE_PATH} ${KOS_BASE}/include ${KOS_BASE}/kernel/arch/dreamcast/include ${KOS_BASE}/addons/include ${KOS_PORTS}/include")
-
-include_directories(
-    $ENV{KOS_BASE}/include
-    $ENV{KOS_BASE}/kernel/arch/dreamcast/include
-    $ENV{KOS_BASE}/addons/include
-    $ENV{KOS_PORTS}/include
-)
-
-##### Configure Linker #####
-set(CMAKE_SYSTEM_LIBRARY_PATH "${CMAKE_SYSTEM_LIBRARY_PATH} ${KOS_BASE}/lib/dreamcast ${KOS_BASE}/addons/lib/dreamcast ${KOS_PORTS}/lib")
-
-if(${KOS_SUBARCH} MATCHES naomi)
-    add_link_options(-Wl,-Ttext=0x8c020000 -T${KOS_BASE}/utils/ldscripts/shlelf-naomi.xc)
-else()
-    add_link_options(-Wl,-Ttext=0x8c010000 -T${KOS_BASE}/utils/ldscripts/shlelf.xc)
-endif()
-
-add_link_options(-ml -m4-single-only -Wl,--gc-sections -nodefaultlibs)
-
-link_directories(
-    ${KOS_BASE}/lib/dreamcast
-    ${KOS_BASE}/addons/lib/dreamcast
-    ${KOS_PORTS}/lib
-)
-
-add_link_options(-L${KOS_BASE}/lib/dreamcast -L${KOS_BASE}/addons/lib/dreamcast -L${KOS_PORTS}/lib)
-
-##### Custom Build Rules #####
-set(CMAKE_C_LINK_EXECUTABLE
-    "<CMAKE_C_COMPILER> <FLAGS> <CMAKE_C_LINK_FLAGS> <LINK_FLAGS> <OBJECTS> -o <TARGET> <LINK_LIBRARIES> \
-    -lm -Wl,--start-group -lkallisti -lc -lgcc -Wl,--end-group")
-set(CMAKE_CXX_LINK_EXECUTABLE
-    "<CMAKE_CXX_COMPILER> <FLAGS> <CMAKE_CXX_LINK_FLAGS> <LINK_FLAGS> <OBJECTS> -o <TARGET> <LINK_LIBRARIES> \
-    -lm -Wl,--start-group -lstdc++ -lkallisti -lc -lgcc -Wl,--end-group")
 
 include("${KOS_BASE}/utils/cmake/dreamcast.cmake")
