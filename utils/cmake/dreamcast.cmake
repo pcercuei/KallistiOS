@@ -1,4 +1,22 @@
+# Auxiliary CMake Utility Functions
+#   Copyright (C) 2023 Colton Pawielski
+#   Copyright (C) 2024 Falco Girgis
+#
+# This file implements utilities for the following additional functionality
+# which exists in the KOS Make build system:
+#   1) linking to existing binaries
+#   2) adding a romdisk
+#
+# NOTE: When using the KOS CMake toolchain file, you do not need to include
+#       thils file directly!
+
 cmake_minimum_required(VERSION 3.23)
+
+#### Set Configuration Variables From Environment ####
+if(NOT DEFINED ENV{KOS_BASE}
+   OR NOT DEFINED ENV{KOS_CC_BASE})
+    message(FATAL_ERROR "KallistiOS environment variables not found")
+endif()
 
 ### Helper Function for Bin2Object ###
 function(kos_bin2o inFile symbol)
@@ -18,8 +36,9 @@ function(kos_bin2o inFile symbol)
 endfunction()
 
 function(kos_add_binary target inFile symbol)
+    file(REAL_PATH "${inFile}" inFile)
     set(outFile ${CMAKE_CURRENT_BINARY_DIR}/${symbol}.o)
-    kos_bin2o(${CMAKE_CURRENT_SOURCE_DIR}/${inFile} ${symbol} ${outFile})
+    kos_bin2o(${inFile} ${symbol} ${outFile})
     target_sources(${target} PRIVATE ${outFile})
 endfunction()
 
@@ -32,7 +51,7 @@ function(kos_add_romdisk target romdiskPath)
         set(romdiskName ${ARGN})
     endif()
 
-    set(romdiskPath ${CMAKE_CURRENT_SOURCE_DIR}/${romdiskPath})
+    file(REAL_PATH "${romdiskPath}" romdiskPath)
 
     set(obj     ${CMAKE_CURRENT_BINARY_DIR}/${romdiskName}.o)
     set(obj_tmp ${CMAKE_CURRENT_BINARY_DIR}/${romdiskName}_tmp.o)
@@ -60,40 +79,10 @@ function(kos_add_romdisk target romdiskPath)
     add_custom_command(
         OUTPUT  ${obj}
         DEPENDS ${obj_tmp}
-        COMMAND ${CMAKE_C_COMPILER} -o ${obj} -r ${obj_tmp} -L$ENV{KOS_BASE}/lib/dreamcast -Wl,--whole-archive -lromdiskbase
+        COMMAND ${KOS_CC_BASE}/bin/sh-elf-gcc -o ${obj} -r ${obj_tmp} -L$ENV{KOS_BASE}/lib/dreamcast -Wl,--whole-archive -lromdiskbase
         COMMAND rm ${obj_tmp}
     )
 
     # Append romdisk object to target
     target_sources(${target} PRIVATE ${obj})
-endfunction()
-
-### Function to Enable SH4 Math Optimizations ###
-function(kos_enable_sh4_math)
-    if(NOT ${PLATFORM_DREAMCAST})
-        message(WARN " PLATFORM_DREAMCAST not set, skipping SH4 Math flags")
-        return()
-    endif()
-
-    message(INFO " Enabling SH4 Math Optimizations")
-    add_compile_options(-ffast-math)
-
-    # Check if -mfsrra and -mfsca are supported by the compiler
-    # They were added for GCC 4.8, so the Legacy GCC4.7 toolchain
-    # will complain if they are added.
-    include(CheckCCompilerFlag)
-    check_c_compiler_flag("-mfsrra" COMPILER_HAS_FSRRA)
-    check_c_compiler_flag("-mfsca"  COMPILER_HAS_FSCA)
-    if(COMPILER_HAS_FSRRA)
-        add_compile_options(-mfsrra)
-    else()
-        message(WARN " Must have GCC4.8 or later for -mfsrra to be enabled")
-    endif()
-
-    if(COMPILER_HAS_FSCA)
-        add_compile_options(-mfsca)
-    else()
-        message(WARN " Must have GCC4.8 or later for -mfsca to be enabled")
-    endif()
-
 endfunction()
