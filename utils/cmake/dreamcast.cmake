@@ -8,7 +8,7 @@
 #   2) adding a romdisk
 #
 # NOTE: When using the KOS CMake toolchain file, you do not need to include
-#       thils file directly!
+#       this file directly!
 
 cmake_minimum_required(VERSION 3.23)
 
