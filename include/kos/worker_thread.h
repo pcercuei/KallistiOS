@@ -12,6 +12,15 @@
     that are idle most of the time, until they are notified that there is work
     pending; in which case they will call their associated work function.
 
+    The work function can then process any number of tasks, until it clears out
+    all of its tasks or decides that it worked enough; in which case the
+    function can return, and will re-start the next time it is notified, or if
+    it was notified while it was running.
+
+    An optional API is also present, which provides a FIFO for jobs to be
+    processed by the threaded worker. This is useful when jobs have to be
+    processed in sequence.
+
     \author Paul Cercueil
 
     \see    kos/thread.h
@@ -24,6 +33,7 @@
 __BEGIN_DECLS
 
 #include <kos/thread.h>
+#include <sys/queue.h>
 
 struct kthread_worker;
 
@@ -32,6 +42,15 @@ struct kthread_worker;
     \headerfile kos/thread.h
 */
 typedef struct kthread_worker kthread_worker_t;
+
+/** \brief   Structure describing one job for the worker. */
+typedef struct kthread_job {
+    /** \brief  List handle. */
+    STAILQ_ENTRY(kthread_job) entry;
+
+    /** \brief  User pointer to the work data. */
+    void *data;
+} kthread_job_t;
 
 /** \brief       Create a new worker thread.
     \relatesalso kthread_worker_t
@@ -64,11 +83,12 @@ void thd_worker_destroy(kthread_worker_t *thd);
     \relatesalso kthread_worker_t
 
     This function will wake up the worker thread, causing it to call its
-    corresponding work function.
+    corresponding work function. Usually, this should be called after a new
+    job has been added with thd_worker_add_job().
 
     \param  thd             The worker thread to wake up.
 
-    \sa thd_worker_create, thd_worker_destroy
+    \sa thd_worker_create, thd_worker_destroy, thd_worker_add_job
 */
 void thd_worker_wakeup(kthread_worker_t *thd);
 
@@ -80,6 +100,33 @@ void thd_worker_wakeup(kthread_worker_t *thd);
     \return                 A handle to the underlying thread.
 */
 kthread_t *thd_worker_get_thread(kthread_worker_t *thd);
+
+/** \brief       Add a new job to the worker thread.
+    \relatesalso kthread_worker_t
+
+    This function will append the job to the worker thread's to-do queue.
+    Note that it is the responsability of the work function (the one passed to
+    thd_worker_create()) to dequeue and process the jobs with
+    thd_worker_dequeue_job(). Also, this function won't automatically notify the
+    worker thread - you still need to call thd_worker_wakeup().
+
+    \param  thd             The worker thread to add a job to.
+    \param  job             The new job to give to the worker thread.
+*/
+void thd_worker_add_job(kthread_worker_t *thd, kthread_job_t *job);
+
+/** \brief       Dequeue one job from the worker thread's to-do queue.
+    \relatesalso kthread_worker_t
+
+    Use this function to dequeue one job from the worker thread, that has been
+    previously queued using thd_worker_add_job(). This function is typically
+    used inside the work function registered with thd_worker_create().
+
+    \param  thd             The worker thread to add a job to.
+
+    \return                 A new job to process, or NULL if there is none.
+*/
+kthread_job_t *thd_worker_dequeue_job(kthread_worker_t *worker);
 
 __END_DECLS
 
