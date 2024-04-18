@@ -43,7 +43,8 @@ static void *thd_worker_thread(void *d) {
     return NULL;
 }
 
-kthread_worker_t *thd_worker_create(void (*routine)(void *), void *data) {
+kthread_worker_t *thd_worker_create_ex(const kthread_attr_t *attr,
+                                       void (*routine)(void *), void *data) {
     kthread_worker_t *worker;
     uint32_t flags;
 
@@ -59,7 +60,7 @@ kthread_worker_t *thd_worker_create(void (*routine)(void *), void *data) {
 
     flags = irq_disable();
 
-    worker->thd = thd_create(0, thd_worker_thread, worker);
+    worker->thd = thd_create_ex(attr, thd_worker_thread, worker);
     if (!worker->thd) {
         irq_restore(flags);
         free(worker);

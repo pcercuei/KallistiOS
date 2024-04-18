@@ -52,11 +52,31 @@ typedef struct kthread_job {
     void *data;
 } kthread_job_t;
 
+/** \brief       Create a new worker thread with the specific set of attributes.
+    \relatesalso kthread_worker_t
+
+    This function will create a thread with the specified attributes that will
+    call the given routine with the given param pointer when notified.
+    The thread will only stop when thd_worker_destroy() is called.
+
+    \param  attr            A set of thread attributes for the created thread.
+                            Passing NULL will initialize all attributes to their
+                            default values.
+    \param  routine         The function to call in the worker thread.
+    \param  data            A parameter to pass to the function called.
+
+    \return                 The new worker thread on success, NULL on failure.
+
+    \sa thd_worker_destroy, thd_worker_wakeup
+*/
+kthread_worker_t * thd_worker_create_ex(const kthread_attr_t *attr,
+                                        void (*routine)(void *), void *data);
+
 /** \brief       Create a new worker thread.
     \relatesalso kthread_worker_t
 
-    This function will create a thread that will call the given routine with the
-    given param pointer when notified.
+    This function will create a thread with the default attributes that will
+    call the given routine with the given param pointer when notified.
     The thread will only stop when thd_worker_destroy() is called.
 
     \param  routine         The function to call in the worker thread.
@@ -66,7 +86,10 @@ typedef struct kthread_job {
 
     \sa thd_worker_destroy, thd_worker_wakeup
 */
-kthread_worker_t *thd_worker_create(void (*routine)(void *), void *data);
+static inline kthread_worker_t *
+thd_worker_create(void (*routine)(void *), void *data) {
+    return thd_worker_create_ex(NULL, routine, data);
+}
 
 /** \brief       Stop and destroy a worker thread.
     \relatesalso kthread_worker_t
