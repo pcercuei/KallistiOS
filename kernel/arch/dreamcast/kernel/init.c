@@ -114,6 +114,11 @@ KOS_INIT_FLAG_WEAK(fs_romdisk_mount_builtin_legacy, false);
 KOS_INIT_FLAG_WEAK(vmu_fs_init, true);
 KOS_INIT_FLAG_WEAK(vmu_fs_shutdown, true);
 
+#ifndef _arch_sub_naomi
+KOS_INIT_FLAG_WEAK(fs_iso9660_init, true);
+KOS_INIT_FLAG_WEAK(fs_iso9660_shutdown, true);
+#endif
+
 /* Auto-init stuff: override with a non-weak symbol if you don't want all of
    this to be linked into your code (and do the same with the
    arch_auto_shutdown function too). */
@@ -182,7 +187,7 @@ int  __weak arch_auto_init(void) {
     }
 
 #ifndef _arch_sub_naomi
-    fs_iso9660_init();
+    KOS_INIT_FLAG_CALL(fs_iso9660_init);
 #endif
 
     KOS_INIT_FLAG_CALL(vmu_fs_init);
@@ -218,7 +223,7 @@ void  __weak arch_auto_shutdown(void) {
     fs_dcload_shutdown();
     KOS_INIT_FLAG_CALL(vmu_fs_shutdown);
 #ifndef _arch_sub_naomi
-    fs_iso9660_shutdown();
+    KOS_INIT_FLAG_CALL(fs_iso9660_shutdown);
 #endif
 #if defined(__NEWLIB__) && !(__NEWLIB__ < 2 && __NEWLIB_MINOR__ < 4)
     fs_dev_shutdown();
