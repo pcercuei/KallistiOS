@@ -12,11 +12,23 @@
 
 cmake_minimum_required(VERSION 3.23)
 
-#### Set Configuration Variables From Environment ####
-if(NOT DEFINED ENV{KOS_BASE}
-   OR NOT DEFINED ENV{KOS_CC_BASE})
-    message(FATAL_ERROR "KallistiOS environment variables not found")
+#### Set Configuration Variables From Environment (if Necessary) ####
+if(NOT DEFINED KOS_BASE)
+    if(NOT DEFINED ENV{KOS_BASE})
+        message(FATAL_ERROR "KOS_BASE environment variable not found!")
+    else()
+        set(KOS_BASE $ENV{KOS_BASE})
+    endif()
 endif()
+
+if(NOT DEFINED KOS_CC_BASE)
+    if(NOT DEFINED ENV{KOS_CC_BASE})
+        message(FATAL_ERROR "KOS_CC_BASE environment variable not found!")
+    else()
+        set(KOS_CC_BASE $ENV{KOS_CC_BASE})
+    endif()
+endif()
+
 
 ### Helper Function for Bin2Object ###
 function(kos_bin2o inFile symbol)
@@ -31,7 +43,7 @@ function(kos_bin2o inFile symbol)
     add_custom_command(
         OUTPUT  ${outFile}
         DEPENDS ${inFile}
-        COMMAND $ENV{KOS_BASE}/utils/bin2o/bin2o ${inFile} ${symbol} ${outFile}
+        COMMAND ${KOS_BASE}/utils/bin2o/bin2o ${inFile} ${symbol} ${outFile}
     )
 endfunction()
 
@@ -70,7 +82,7 @@ function(kos_add_romdisk target romdiskPath)
     add_custom_command(
         OUTPUT  ${img}
         DEPENDS ${romdiskFiles}
-        COMMAND $ENV{KOS_BASE}/utils/genromfs/genromfs -f ${img} -d ${romdiskPath} -v
+        COMMAND ${KOS_BASE}/utils/genromfs/genromfs -f ${img} -d ${romdiskPath} -v
     )
 
     kos_bin2o(${img} ${romdiskName} ${obj_tmp})
@@ -79,7 +91,7 @@ function(kos_add_romdisk target romdiskPath)
     add_custom_command(
         OUTPUT  ${obj}
         DEPENDS ${obj_tmp}
-        COMMAND ${KOS_CC_BASE}/bin/sh-elf-gcc -o ${obj} -r ${obj_tmp} -L$ENV{KOS_BASE}/lib/dreamcast -Wl,--whole-archive -lromdiskbase
+        COMMAND ${KOS_CC_BASE}/bin/sh-elf-gcc -o ${obj} -r ${obj_tmp} -L${KOS_BASE}/lib/dreamcast -Wl,--whole-archive -lromdiskbase
         COMMAND rm ${obj_tmp}
     )
 
