@@ -5,6 +5,7 @@
 */
 
 #include <arch/irq.h>
+#include <assert.h>
 #include <kos/genwait.h>
 #include <kos/thread.h>
 #include <kos/worker_thread.h>
@@ -48,6 +49,8 @@ kthread_worker_t *thd_worker_create_ex(const kthread_attr_t *attr,
     kthread_worker_t *worker;
     uint32_t flags;
 
+    assert(routine != NULL);
+
     worker = malloc(sizeof(*worker));
     if (!worker)
         return NULL;
@@ -73,7 +76,11 @@ kthread_worker_t *thd_worker_create_ex(const kthread_attr_t *attr,
 }
 
 void thd_worker_wakeup(kthread_worker_t *worker) {
-    uint32_t flags = irq_disable();
+    uint32_t flags;
+
+    assert(worker != NULL);
+
+    flags = irq_disable();
 
     worker->pending = true;
     genwait_wake_one(worker);
@@ -82,6 +89,8 @@ void thd_worker_wakeup(kthread_worker_t *worker) {
 }
 
 void thd_worker_destroy(kthread_worker_t *worker) {
+    assert(worker != NULL);
+
     worker->quit = true;
     genwait_wake_one(worker);
 
