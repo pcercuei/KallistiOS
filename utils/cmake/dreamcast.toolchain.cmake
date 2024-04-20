@@ -1,5 +1,8 @@
 # CMake Toolchain file for targeting the Dreamcast or NAOMI with CMake.
-#  (c)2023 Falco Girgis, Luke Benstead
+#  Copyright (C) 2023 Luke Benstead
+#  Copyright (C) 2023, 2024 Falco Girgis
+#  Copyright (C) 2024 Donald Haase
+#  Copyright (C) 2024 Paul Cercueil
 #
 # This file is to be passed to CMake when compiling a regular CMake project
 # to cross-compile for the Dreamcast, using the KOS environment and settings.
@@ -20,7 +23,8 @@
 # The original toolchain file was created by Kazade for the Simulant 
 # engine who has graciously allowed the rest of the scene to warez it. 
 
-cmake_minimum_required(VERSION 3.23)
+#### This minimum is due to the use of add_link_options
+cmake_minimum_required(VERSION 3.13)
 
 #### Set Configuration Variables From Environment ####
 if(NOT DEFINED ENV{KOS_BASE}

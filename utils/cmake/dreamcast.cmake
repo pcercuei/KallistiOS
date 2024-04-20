@@ -10,7 +10,8 @@
 # NOTE: When using the KOS CMake toolchain file, you do not need to include
 #       this file directly!
 
-cmake_minimum_required(VERSION 3.23)
+### This minimum is based on the minimum requirement in dreamcast.toolchain.cmake
+cmake_minimum_required(VERSION 3.13)
 
 #### Set Configuration Variables From Environment (if Necessary) ####
 if(NOT DEFINED KOS_BASE)
@@ -28,7 +29,6 @@ if(NOT DEFINED KOS_CC_BASE)
         set(KOS_CC_BASE $ENV{KOS_CC_BASE})
     endif()
 endif()
-
 
 ### Helper Function for Bin2Object ###
 function(kos_bin2o inFile symbol)
