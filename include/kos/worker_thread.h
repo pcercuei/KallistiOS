@@ -69,7 +69,7 @@ typedef struct kthread_job {
 
     \sa thd_worker_destroy, thd_worker_wakeup
 */
-kthread_worker_t * thd_worker_create_ex(const kthread_attr_t *attr,
+kthread_worker_t *thd_worker_create_ex(const kthread_attr_t *attr,
                                         void (*routine)(void *), void *data);
 
 /** \brief       Create a new worker thread.
