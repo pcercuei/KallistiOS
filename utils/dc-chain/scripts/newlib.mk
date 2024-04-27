@@ -13,6 +13,7 @@ $(build_newlib): logdir
 	    --disable-newlib-supplied-syscalls \
 	    --target=$(target) \
 	    --prefix=$(prefix) \
+	    --enable-lto \
 	    $(cpu_configure_args) \
 	    $(newlib_extra_configure_args) \
 	    CC_FOR_TARGET="$(SH_CC_FOR_TARGET)" \

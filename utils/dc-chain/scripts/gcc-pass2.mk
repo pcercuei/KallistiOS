@@ -25,6 +25,7 @@ $(build_gcc_pass2): logdir
           --enable-threads=$(thread_model) \
           --enable-languages=$(enabled_languages) \
           --enable-checking=release \
+          --enable-lto \
           $(cpu_configure_args) \
           $(gcc_extra_configure_args) \
           $(macos_gcc_configure_args) \

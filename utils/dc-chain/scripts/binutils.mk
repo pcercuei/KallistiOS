@@ -15,6 +15,7 @@ $(build_binutils): logdir
         --target=$(target) \
         --prefix=$(prefix) \
         --disable-werror \
+        --enable-lto \
         $(libbfd_install_flag) \
         $(binutils_extra_configure_args) \
         CC="$(CC)" \

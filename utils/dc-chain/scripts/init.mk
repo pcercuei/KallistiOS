@@ -56,6 +56,9 @@ SH_CXX_FOR_TARGET = $(sh_target)-$(GXX)
 # ARM toolchain
 arm_target = arm-eabi
 
+SH_CC_FOR_TARGET += -flto -ffat-lto-objects -fno-builtin
+SH_CXX_FOR_TARGET += -flto -ffat-lto-objects -fno-builtin
+
 # Handle macOS
 ifdef MACOS
   ifdef MACOS_MOJAVE_AND_UP

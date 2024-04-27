@@ -20,6 +20,7 @@ $(build_gcc_pass1): logdir
 	      --enable-languages=c \
 	      --disable-libssp \
 	      --enable-checking=release \
+	      --enable-lto \
 	      $(cpu_configure_args) \
 	      $(gcc_extra_configure_args) \
 	      $(macos_gcc_configure_args) \
