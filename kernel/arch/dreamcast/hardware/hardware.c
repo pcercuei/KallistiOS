@@ -93,7 +93,8 @@ void hardware_shutdown(void) {
             if (!KOS_PLATFORM_IS_NAOMI)
                 KOS_INIT_FLAG_CALL(bba_la_shutdown);
             KOS_INIT_FLAG_CALL(maple_shutdown);
-            KOS_INIT_FLAG_CALL(cdrom_shutdown);
+            if (!KOS_PLATFORM_IS_NAOMI)
+                KOS_INIT_FLAG_CALL(cdrom_shutdown);
             g2_dma_shutdown();
             spu_shutdown();
             vid_shutdown();
