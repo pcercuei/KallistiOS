@@ -15,11 +15,16 @@
 #include "dc/modem/modem.h"
 #include "mintern.h"
 
+/* Forward declarations */
+static void modemIntResetTimeoutTimer(void);
+static void modemIntShutdownTimeoutTimer(void);
+static void modemIntSetupTimeoutTimer(int bps, void (*callbackCode)(void));
+static void modemIntStartTimeoutTimer(void);
+
 /* This controls the code that's executed during a modem generated interrupt */
 void (*modemCallbackCode)(void) = NULL;
 
 /* Flag pointer and function callback used by the timeout timer */
-unsigned char *modemTimeoutCallbackFlag         = NULL;
 void (*modemTimeoutCallbackCode)(void) = NULL;
 
 /* This is used for a slight delay after connection. The Dreamcast's modem
@@ -100,7 +105,7 @@ void modemConnectionAnswerCallback(void) {
     /* Set up the counter so that after a period of time, the
        connection can be aborted if no progress is being made */
     mintCounter = 0;
-    modemIntSetupTimeoutTimer(1, NULL, mintInitialConnectionTimeoutCallback);
+    modemIntSetupTimeoutTimer(1, mintInitialConnectionTimeoutCallback);
     modemIntStartTimeoutTimer();
 }
 
@@ -514,8 +519,7 @@ void modemConnection(void) {
 
                 /* Setup the timeout timer to delay for 1 second before
                    calling the callback function */
-                modemIntSetupTimeoutTimer(1, NULL,
-                                          modemConnectionAnswerCallback);
+                modemIntSetupTimeoutTimer(1, modemConnectionAnswerCallback);
                 modemIntStartTimeoutTimer();
             }
 
@@ -560,7 +564,7 @@ void modemConnection(void) {
                 modemCallbackCode     = modemConnectedUpdate;
 
                 mintCounter = 0;
-                modemIntSetupTimeoutTimer(1, NULL, mintDelayCallback);
+                modemIntSetupTimeoutTimer(1, mintDelayCallback);
                 modemIntStartTimeoutTimer();
             }
 
@@ -753,24 +757,15 @@ static void modemIntrTimeoutCallback(irq_t source, irq_context_t *context,
     (void)context;
     (void)data;
 
-    if(modemTimeoutCallbackFlag != NULL)
-        *modemTimeoutCallbackFlag = 1;
-
     if(modemTimeoutCallbackCode != NULL)
         modemTimeoutCallbackCode();
 }
 
-void modemIntSetupTimeoutTimer(int bps, unsigned char *callbackFlag,
-                               void (*callbackCode)(void)) {
-    modemTimeoutCallbackFlag = callbackFlag;
+void modemIntSetupTimeoutTimer(int bps, void (*callbackCode)(void)) {
     modemTimeoutCallbackCode = callbackCode;
 
     /* Setup TMU1 so it can act as a timeout indicator */
     timer_stop(TMU1);
-
-    /* Make sure the timeout variable is reset */
-    if(modemTimeoutCallbackFlag != NULL)
-        *modemTimeoutCallbackFlag = 0;
 
     /* Modify TMU1 so that it can be used for a timeout */
     irq_set_handler(EXC_TMU1_TUNI1, modemIntrTimeoutCallback, NULL);
@@ -783,14 +778,14 @@ void modemIntSetupTimeoutTimer(int bps, unsigned char *callbackFlag,
     modemInternalFlags &= ~MODEM_INTERNAL_FLAG_TIMER_RUNNING;
 }
 
-void modemIntStartTimeoutTimer(void) {
+static void modemIntStartTimeoutTimer(void) {
     if(!(modemInternalFlags & MODEM_INTERNAL_FLAG_TIMER_RUNNING)) {
         timer_start(TMU1);
         modemInternalFlags |= MODEM_INTERNAL_FLAG_TIMER_RUNNING;
     }
 }
 
-void modemIntResetTimeoutTimer(void) {
+static void modemIntResetTimeoutTimer(void) {
     if(modemInternalFlags & MODEM_INTERNAL_FLAG_TIMER_RUNNING) {
         timer_stop(TMU1);
         timer_clear(TMU1);
@@ -798,7 +793,7 @@ void modemIntResetTimeoutTimer(void) {
     }
 }
 
-void modemIntShutdownTimeoutTimer(void) {
+static void modemIntShutdownTimeoutTimer(void) {
     /* Stop the timer if it's still running */
     modemIntResetTimeoutTimer();
 

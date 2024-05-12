@@ -112,11 +112,6 @@ void modemIntSetupProtocolInterrupts(int clear);
 void modemIntConfigModem(void);
 void modemIntSetHandler(int protocol, int mode);
 void modemIntResetControlCode(void);
-void modemIntSetupTimeoutTimer(int bps, unsigned char *callbackFlag,
-                               void (*callbackCode)(void));
-void modemIntStartTimeoutTimer(void);
-void modemIntResetTimeoutTimer(void);
-void modemIntShutdownTimeoutTimer(void);
 void modemInternalSetupDialingInts(int clear);
 
 /* From modem.c */
