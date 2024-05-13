@@ -1,8 +1,11 @@
 /* KallistiOS ##version##
 
    screenshot.c
-   (c)2002 Megan Potter
-   (c)2008 Donald Haase
+
+   Copyright (C) 2002 Megan Potter
+   Copyright (C) 2008 Donald Haase
+   Copyright (C) 2024 Andy Barajas
+
  */
 
 #include <stdio.h>
@@ -11,6 +14,7 @@
 #include <dc/video.h>
 #include <kos/fs.h>
 #include <arch/irq.h>
+#include <arch/timer.h>
 
 /*
 
@@ -24,53 +28,88 @@ This will now work with any of the supported video modes.
 */
 
 int vid_screen_shot(const char *destfn) {
-    file_t  f;
-    int i, numpix;
-    uint8   *buffer;
-    char    header[256];
-    uint32  save;
-    uint32  pixel;  /* to fit 888 mode */
-    uint8   r, g, b;
-    uint8   bpp;
+    file_t   f;
+    uint8_t  *buffer;
+    char     header[256];
+    int      i, numpix;
+    uint32_t save;
+    uint32_t pixel, pixel1, pixel2;  /* to fit 888 mode */
+    uint8_t  r, g, b;
+    uint8_t  bpp;
 
     bpp = 3;    /* output to ppm is 3 bytes per pixel */
     numpix = vid_mode->width * vid_mode->height;
 
     /* Allocate a new buffer so we can blast it all at once */
-    buffer = (uint8 *)malloc(numpix * bpp);
+    buffer = (uint8_t *)malloc(numpix * bpp);
 
     if(buffer == NULL) {
         dbglog(DBG_ERROR, "vid_screen_shot: can't allocate ss memory\n");
         return -1;
     }
 
+    /* Open output file */
+    f = fs_open(destfn, O_WRONLY | O_TRUNC);
+
+    if(!f) {
+        dbglog(DBG_ERROR, "vid_screen_shot: can't open output file '%s'\n", destfn);
+        free(buffer);
+        return -1;
+    }
+
     /* Disable interrupts */
     save = irq_disable();
 
-    /* Write out each pixel as 24 bits */
+    /* Write out each pixel as 24-bits */
     switch(vid_mode->pm) {
         case(PM_RGB555): {
-            for(i = 0; i < numpix; i++) {
-                pixel = vram_s[i];
-                r = (((pixel >> 10) & 0x1f) << 3);
-                g = (((pixel >>  5) & 0x1f) << 3);
-                b = (((pixel >>  0) & 0x1f) << 3);
-                buffer[i * 3 + 0] = r;
-                buffer[i * 3 + 1] = g;
-                buffer[i * 3 + 2] = b;
+            /* Process two 16-bit pixels at a time */
+            for(i = 0; i < numpix/2; i++) {
+                pixel = vram_l[i];
+                pixel1 = pixel & 0xFFFF;
+                pixel2 = pixel >> 16;
+
+                /* Process the first pixel */
+                r = (((pixel1 >> 10) & 0x1f) << 3);
+                g = (((pixel1 >> 5) & 0x1f) << 3);
+                b = (((pixel1 >> 0) & 0x1f) << 3);
+                buffer[i * 6 + 0] = r;
+                buffer[i * 6 + 1] = g;
+                buffer[i * 6 + 2] = b;
+
+                /* Process the second pixel */
+                r = (((pixel2 >> 10) & 0x1f) << 3);
+                g = (((pixel2 >> 5) & 0x1f) << 3);
+                b = (((pixel2 >> 0) & 0x1f) << 3);
+                buffer[i * 6 + 3] = r;
+                buffer[i * 6 + 4] = g;
+                buffer[i * 6 + 5] = b;
             }
 
             break;
         }
         case(PM_RGB565): {
-            for(i = 0; i < numpix; i++) {
-                pixel = vram_s[i];
-                r = (((pixel >> 11) & 0x1f) << 3);
-                g = (((pixel >>  5) & 0x3f) << 2);
-                b = (((pixel >>  0) & 0x1f) << 3);
-                buffer[i * 3 + 0] = r;
-                buffer[i * 3 + 1] = g;
-                buffer[i * 3 + 2] = b;
+            /* Process two 16-bit pixels at a time */
+            for(i = 0; i < numpix/2; i++) {
+                pixel = vram_l[i];
+                pixel1 = pixel & 0xFFFF;
+                pixel2 = pixel >> 16;
+
+                /* Process the first pixel */
+                r = (((pixel1 >> 11) & 0x1f) << 3);
+                g = (((pixel1 >> 5) & 0x3f) << 2);
+                b = (((pixel1 >> 0) & 0x1f) << 3);
+                buffer[i * 6 + 0] = r;
+                buffer[i * 6 + 1] = g;
+                buffer[i * 6 + 2] = b;
+
+                /* Process the second pixel */
+                r = (((pixel2 >> 11) & 0x1f) << 3);
+                g = (((pixel2 >> 5) & 0x3f) << 2);
+                b = (((pixel2 >> 0) & 0x1f) << 3);
+                buffer[i * 6 + 3] = r;
+                buffer[i * 6 + 4] = g;
+                buffer[i * 6 + 5] = b;
             }
 
             break;
@@ -91,21 +130,13 @@ int vid_screen_shot(const char *destfn) {
         default: {
             dbglog(DBG_ERROR, "vid_screen_shot: can't process pixel mode %d\n", vid_mode->pm);
             irq_restore(save);
+            fs_close(f);
             free(buffer);
             return -1;
         }
     }
 
     irq_restore(save);
-
-    /* Open output file */
-    f = fs_open(destfn, O_WRONLY | O_TRUNC);
-
-    if(!f) {
-        dbglog(DBG_ERROR, "vid_screen_shot: can't open output file '%s'\n", destfn);
-        free(buffer);
-        return -1;
-    }
 
     /* Write a small header */
     sprintf(header, "P6\n#KallistiOS Screen Shot\n%d %d\n255\n", vid_mode->width, vid_mode->height);
@@ -127,6 +158,8 @@ int vid_screen_shot(const char *destfn) {
 
     fs_close(f);
     free(buffer);
+
+    dbglog(DBG_INFO, "vid_screen_shot: written to output file '%s'\n", destfn);
 
     return 0;
 }
