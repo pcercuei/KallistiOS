@@ -21,9 +21,9 @@ rm-elf:
 $(TARGET): $(OBJS) 
 	kos-cc -o $(TARGET) $(OBJS)
 
-# For Mac & Linux, sudo is required with the -c "." command to save data to the PC
+# For Mac, Linux, Ubuntu sudo is required with the -c "." command to save data to the PC
+#    sudo $(KOS_LOADER) $(TARGET) -c "."
 run: $(TARGET)
-	#sudo $(KOS_LOADER) $(TARGET) -c "."
 	$(KOS_LOADER) $(TARGET) -c "."
 
 dist: $(TARGET)

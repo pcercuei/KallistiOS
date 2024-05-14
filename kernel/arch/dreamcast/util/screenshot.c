@@ -29,14 +29,14 @@ This will now work with any of the supported video modes.
 int vid_screen_shot(const char *destfn) {
     file_t   f;
     uint8_t  *buffer;
+    uint8_t  *vram_b; /* Used for PM_RGB888P(24-bit) */
     char     header[256];
     int      i, numpix;
     uint32_t save;
-    uint32_t pixel, pixel1, pixel2;  /* to fit 888 mode */
+    uint32_t pixel, pixel1, pixel2;
     uint8_t  r, g, b;
     uint8_t  bpp;
-    uint8_t  *vram_b = (uint8_t *)vram_l;
-
+    
     bpp = 3;    /* output to ppm is 3 bytes per pixel */
     numpix = vid_mode->width * vid_mode->height;
 
@@ -115,6 +115,7 @@ int vid_screen_shot(const char *destfn) {
             break;
         }
         case(PM_RGB888P): { /* (24-bit) */
+            vram_b = (uint8_t *)vram_l;
             for(i = 0; i < numpix; i++) {
                 buffer[i * 3 + 0] = vram_b[i * 3 + 2];
 				buffer[i * 3 + 1] = vram_b[i * 3 + 1];
