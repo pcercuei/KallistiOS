@@ -14,7 +14,6 @@
 #include <dc/video.h>
 #include <kos/fs.h>
 #include <arch/irq.h>
-#include <arch/timer.h>
 
 /*
 
