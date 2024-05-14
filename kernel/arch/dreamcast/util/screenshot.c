@@ -116,11 +116,11 @@ int vid_screen_shot(const char *destfn) {
         }
         case(PM_RGB888P): { /* (24-bit) */
             for(i = 0; i < numpix; i++) {
-                buffer[0] = vram_b[i * 3 + 2];
-				buffer[1] = vram_b[i * 3 + 1];
-				buffer[2] = vram_b[i * 3];
+                buffer[i * 3 + 0] = vram_b[i * 3 + 2];
+				buffer[i * 3 + 1] = vram_b[i * 3 + 1];
+				buffer[i * 3 + 2] = vram_b[i * 3 + 0];
             }
-
+            
             break;
         }
         case(PM_RGB0888): { /* (32-bit) */
