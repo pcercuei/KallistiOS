@@ -34,6 +34,8 @@ utils/naominetboot/naominetboot
 examples/dreamcast/basic/exec/romdisk/sub.bin
 examples/dreamcast/kgl/basic/vq/fruit.vq
 examples/dreamcast/kgl/nehe/nehe26/data/txt2bin
+examples/dreamcast/gldc/basic/vq/fruit.vq
+examples/dreamcast/gldc/nehe/nehe26/data/txt2bin
 examples/dreamcast/conio/adventure/data.c
 examples/dreamcast/conio/adventure/datagen
 examples/dreamcast/png/romdisk_boot.img
