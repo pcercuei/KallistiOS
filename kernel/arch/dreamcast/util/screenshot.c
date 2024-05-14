@@ -35,6 +35,7 @@ int vid_screen_shot(const char *destfn) {
     uint32_t pixel, pixel1, pixel2;  /* to fit 888 mode */
     uint8_t  r, g, b;
     uint8_t  bpp;
+    uint8_t  *vram_b = (uint8_t *)vram_l;
 
     bpp = 3;    /* output to ppm is 3 bytes per pixel */
     numpix = vid_mode->width * vid_mode->height;
@@ -61,7 +62,7 @@ int vid_screen_shot(const char *destfn) {
 
     /* Write out each pixel as 24-bits */
     switch(vid_mode->pm) {
-        case(PM_RGB555): {
+        case(PM_RGB555): { /* (15-bit) */
             /* Process two 16-bit pixels at a time */
             for(i = 0; i < numpix/2; i++) {
                 pixel = vram_l[i];
@@ -87,7 +88,7 @@ int vid_screen_shot(const char *destfn) {
 
             break;
         }
-        case(PM_RGB565): {
+        case(PM_RGB565): { /* (16-bit) */
             /* Process two 16-bit pixels at a time */
             for(i = 0; i < numpix/2; i++) {
                 pixel = vram_l[i];
@@ -113,7 +114,16 @@ int vid_screen_shot(const char *destfn) {
 
             break;
         }
-        case(PM_RGB888): {
+        case(PM_RGB888P): { /* (24-bit) */
+            for(i = 0; i < numpix; i++) {
+                buffer[0] = vram_b[i * 3 + 2];
+				buffer[1] = vram_b[i * 3 + 1];
+				buffer[2] = vram_b[i * 3];
+            }
+
+            break;
+        }
+        case(PM_RGB0888): { /* (32-bit) */
             for(i = 0; i < numpix; i++) {
                 pixel = vram_l[i];
                 r = (((pixel >> 16) & 0xff));
@@ -126,6 +136,7 @@ int vid_screen_shot(const char *destfn) {
 
             break;
         }
+        
         default: {
             dbglog(DBG_ERROR, "vid_screen_shot: can't process pixel mode %d\n", vid_mode->pm);
             irq_restore(save);
