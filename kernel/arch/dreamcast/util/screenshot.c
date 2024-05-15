@@ -26,6 +26,10 @@ This will now work with any of the supported video modes.
 
 */
 
+static inline uint32_t bswap8(uint32_t val) {
+    return (val & 0xffff0000) | ((val & 0xff00) >> 8) | ((val & 0xff) << 8);
+}
+
 int vid_screen_shot(const char *destfn) {
     file_t   f;
     uint8_t  *buffer;
@@ -33,10 +37,12 @@ int vid_screen_shot(const char *destfn) {
     char     header[256];
     int      i, numpix;
     uint32_t save;
-    uint32_t pixel, pixel1, pixel2;
+    uint32_t pixel, pixels21, pixels43;
     uint8_t  r, g, b;
     uint8_t  bpp;
-    
+    uint32_t *buffer32, *vram32, r1, r2, g1, g2, b1, b2;
+    uint32_t *vram = vram_l;
+
     bpp = 3;    /* output to ppm is 3 bytes per pixel */
     numpix = vid_mode->width * vid_mode->height;
 
@@ -47,6 +53,8 @@ int vid_screen_shot(const char *destfn) {
         dbglog(DBG_ERROR, "vid_screen_shot: can't allocate ss memory\n");
         return -1;
     }
+
+    buffer32 = (uint32_t *)buffer;
 
     /* Open output file */
     f = fs_open(destfn, O_WRONLY | O_TRUNC);
@@ -63,65 +71,65 @@ int vid_screen_shot(const char *destfn) {
     /* Write out each pixel as 24-bits */
     switch(vid_mode->pm) {
         case(PM_RGB555): { /* (15-bit) */
-            /* Process two 16-bit pixels at a time */
-            for(i = 0; i < numpix/2; i++) {
-                pixel = vram_l[i];
-                pixel1 = pixel & 0xFFFF;
-                pixel2 = pixel >> 16;
+            /* Process four 16-bit pixels at a time */
+            for(i = 0; i < numpix/4; i++) {
+                pixels21 = *vram++;
+                pixels43 = *vram++;
 
-                /* Process the first pixel */
-                r = (((pixel1 >> 10) & 0x1f) << 3);
-                g = (((pixel1 >> 5) & 0x1f) << 3);
-                b = (((pixel1 >> 0) & 0x1f) << 3);
-                buffer[i * 6 + 0] = r;
-                buffer[i * 6 + 1] = g;
-                buffer[i * 6 + 2] = b;
+                r1 = bswap8((pixels21 << 1) & 0xf800f800); /* r1: 0xf80000f8 */
+                r2 = bswap8((pixels43 << 1) & 0xf800f800); /* r2: 0xf80000f8 */
 
-                /* Process the second pixel */
-                r = (((pixel2 >> 10) & 0x1f) << 3);
-                g = (((pixel2 >> 5) & 0x1f) << 3);
-                b = (((pixel2 >> 0) & 0x1f) << 3);
-                buffer[i * 6 + 3] = r;
-                buffer[i * 6 + 4] = g;
-                buffer[i * 6 + 5] = b;
+                g1 = bswap8((pixels21 << 6) & 0xf800f800); /* g1: 0xf80000f8 */
+                g2 = bswap8((pixels43 << 6) & 0xf800f800); /* g2: 0xf80000f8 */
+
+                b1 = bswap8((pixels21 << 11) & 0xf800f800); /* b1: 0xf80000f8 */
+                b2 = bswap8((pixels43 << 11) & 0xf800f800); /* b2: 0xf80000f8 */
+
+                /* Write RBGR */
+                *buffer32++ = r1 | (g1 << 8) | (b1 << 16);
+
+                /* Write GRBG */
+                *buffer32++ = (g1 >> 24) | (r2 << 16) | (b1 >> 16) | (g2 << 24);
+
+                /* Write BGRB */
+                *buffer32++ = b2 | (r2 >> 16) | (g2 >> 8);
             }
-
             break;
         }
         case(PM_RGB565): { /* (16-bit) */
-            /* Process two 16-bit pixels at a time */
-            for(i = 0; i < numpix/2; i++) {
-                pixel = vram_l[i];
-                pixel1 = pixel & 0xFFFF;
-                pixel2 = pixel >> 16;
+            /* Process four 16-bit pixels at a time */
+            for(i = 0; i < numpix/4; i++) {
+                pixels21 = *vram++;
+                pixels43 = *vram++;
 
-                /* Process the first pixel */
-                r = (((pixel1 >> 11) & 0x1f) << 3);
-                g = (((pixel1 >> 5) & 0x3f) << 2);
-                b = (((pixel1 >> 0) & 0x1f) << 3);
-                buffer[i * 6 + 0] = r;
-                buffer[i * 6 + 1] = g;
-                buffer[i * 6 + 2] = b;
+                r1 = bswap8(pixels21 & 0xf800f800); /* r1: 0xf80000f8 */
+                r2 = bswap8(pixels43 & 0xf800f800); /* r2: 0xf80000f8 */
 
-                /* Process the second pixel */
-                r = (((pixel2 >> 11) & 0x1f) << 3);
-                g = (((pixel2 >> 5) & 0x3f) << 2);
-                b = (((pixel2 >> 0) & 0x1f) << 3);
-                buffer[i * 6 + 3] = r;
-                buffer[i * 6 + 4] = g;
-                buffer[i * 6 + 5] = b;
+                g1 = bswap8((pixels21 << 5) & 0xfc00fc00); /* g1: 0xfc0000fc */
+                g2 = bswap8((pixels43 << 5) & 0xfc00fc00); /* g2: 0xfc0000fc */
+
+                b1 = bswap8((pixels21 << 11) & 0xf800f800); /* b1: 0xf80000f8 */
+                b2 = bswap8((pixels43 << 11) & 0xf800f800); /* b2: 0xf80000f8 */
+
+                /* Write RBGR */
+                *buffer32++ = r1 | (g1 << 8) | (b1 << 16);
+
+                /* Write GRBG */
+                *buffer32++ = (g1 >> 24) | (r2 << 16) | (b1 >> 16) | (g2 << 24);
+
+                /* Write BGRB */
+                *buffer32++ = b2 | (r2 >> 16) | (g2 >> 8);
             }
-
             break;
         }
         case(PM_RGB888P): { /* (24-bit) */
             vram_b = (uint8_t *)vram_l;
             for(i = 0; i < numpix; i++) {
                 buffer[i * 3 + 0] = vram_b[i * 3 + 2];
-				buffer[i * 3 + 1] = vram_b[i * 3 + 1];
-				buffer[i * 3 + 2] = vram_b[i * 3 + 0];
+                buffer[i * 3 + 1] = vram_b[i * 3 + 1];
+                buffer[i * 3 + 2] = vram_b[i * 3 + 0];
             }
-            
+
             break;
         }
         case(PM_RGB0888): { /* (32-bit) */
@@ -137,7 +145,7 @@ int vid_screen_shot(const char *destfn) {
 
             break;
         }
-        
+
         default: {
             dbglog(DBG_ERROR, "vid_screen_shot: can't process pixel mode %d\n", vid_mode->pm);
             irq_restore(save);
