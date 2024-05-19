@@ -599,6 +599,20 @@ static inline void thd_schedule_inner(kthread_t *thd) {
         }
     }
 
+    if(__is_defined(__SH_ATOMIC_MODEL_SOFT_GUSA__)
+       && __unlikely((int32_t)CONTEXT_SP(thd->context) < 0)) {
+        /* The stack pointer is negative: it means we are in the middle of an
+           atomic section, and we need to roll-back.
+           The r0 register contains the address of the end of the section,
+           and the stack pointer contains the negated section size.
+           We need to roll-back to the instruction before the start of the
+           section, hence the -2. */
+        CONTEXT_PC(thd->context) = thd->context.r[0] + CONTEXT_SP(thd->context) - 2;
+
+        /* GUSA functions will save the real SP in r1, we need to restore it. */
+        CONTEXT_SP(thd->context) = thd->context.r[1];
+    }
+
     irq_set_context(&thd_current->context);
 }
 
