@@ -8,7 +8,7 @@
 # useful in the context of KOS to go with the Newlib defaults.
 
 OBJS = abort.o byteorder.o memset2.o memset4.o memcpy2.o memcpy4.o \
-	assert.o dbglog.o malloc.o dlmalloc.o \
+	assert.o dbglog.o malloc.o \
 	opendir.o readdir.o closedir.o rewinddir.o scandir.o seekdir.o \
 	telldir.o usleep.o inet_addr.o realpath.o getcwd.o chdir.o mkdir.o \
 	creat.o sleep.o rmdir.o rename.o inet_pton.o inet_ntop.o \
@@ -16,6 +16,12 @@ OBJS = abort.o byteorder.o memset2.o memset4.o memcpy2.o memcpy4.o \
 	gethostbyname.o getaddrinfo.o dirfd.o nanosleep.o basename.o dirname.o \
 	sched_yield.o
 
+ifneq ($(KOS_USE_TLSF),)
+malloc.o: CFLAGS += -DKOS_USE_TLSF
+OBJS += ../tlsf/tlsf.o malloc_tlsf.o
+else
+OBJS += dlmalloc.o
 dlmalloc.o: CFLAGS += -DUSE_DL_PREFIX
+endif
 
 include $(KOS_BASE)/Makefile.prefab

@@ -6,9 +6,14 @@
 
 #include <stdlib.h>
 #include <kos/malloc.h>
-#include <kos/dlmalloc.h>
 
-#define KOS_MM_IMPL(fn) dl##fn
+#ifdef KOS_USE_TLSF
+#  include <kos/malloc_tlsf.h>
+#  define KOS_MM_IMPL(fn) kos_tlsf_##fn
+#else
+#  include <kos/dlmalloc.h>
+#  define KOS_MM_IMPL(fn) dl##fn
+#endif
 
 void free(void *ptr) {
     KOS_MM_IMPL(free)(ptr);
