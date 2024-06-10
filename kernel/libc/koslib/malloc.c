@@ -16,13 +16,13 @@
    leave this as prestine as possible for upgrading later.
 */
 
-#include <malloc.h>
 #include <assert.h>
 #include <stdio.h>
 #include <string.h>
 #include <arch/spinlock.h>
 #include <arch/arch.h>
 
+#include <kos/malloc.h>
 #include <kos/opts.h>
 
 #undef DEBUG

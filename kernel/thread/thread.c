@@ -10,12 +10,12 @@
 #include <stdlib.h>
 #include <assert.h>
 #include <string.h>
-#include <malloc.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <assert.h>
 #include <reent.h>
 #include <errno.h>
+#include <kos/malloc.h> /* for malloc_irq_safe() */
 #include <kos/thread.h>
 #include <kos/dbgio.h>
 #include <kos/sem.h>
