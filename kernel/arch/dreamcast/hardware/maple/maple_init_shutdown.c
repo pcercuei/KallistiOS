@@ -4,7 +4,6 @@
    Copyright (C) 2002 Megan Potter
  */
 
-#include <malloc.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <assert.h>

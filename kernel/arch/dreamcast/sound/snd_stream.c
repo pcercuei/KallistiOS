@@ -13,7 +13,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
-#include <malloc.h>
+#include <stdlib.h>
 #include <sys/queue.h>
 
 #include <kos/mutex.h>

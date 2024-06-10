@@ -4,7 +4,7 @@
    Copyright (C) 2015 Lawrence Sebald
 */
 
-#include <malloc.h>
+#include <stdlib.h>
 
 /* Declare memalign, since it may not be available in strict standard-compliant
    mode. */

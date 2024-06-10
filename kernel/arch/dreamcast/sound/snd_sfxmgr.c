@@ -13,7 +13,6 @@
 #include <stdlib.h>
 #include <assert.h>
 #include <string.h>
-#include <malloc.h>
 
 #include <sys/queue.h>
 #include <kos/fs.h>
