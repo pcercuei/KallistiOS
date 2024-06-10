@@ -252,6 +252,7 @@ void  __weak arch_auto_shutdown(void) {
     fs_shutdown();
     thd_shutdown();
     rtc_shutdown();
+    mm_shutdown();
 }
 
 /* This is the entry point inside the C program */
