@@ -22,7 +22,7 @@
 #include <arch/spinlock.h>
 #include <arch/arch.h>
 
-#include <kos/malloc.h>
+#include <kos/dlmalloc.h>
 #include <kos/opts.h>
 
 #undef DEBUG
@@ -49,7 +49,7 @@ static spinlock_t mALLOC_MUTEx = SPINLOCK_INITIALIZER;
 
 /* Use this from within an IRQ to determine if it's safe
    to do memory allocation stuff */
-int malloc_irq_safe(void) {
+int dlmalloc_irq_safe(void) {
     return !spinlock_is_locked(&mALLOC_MUTEx);
 }
 

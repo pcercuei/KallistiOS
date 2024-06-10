@@ -8,7 +8,7 @@
 #include <kos/netcfg.h>
 #include <kos/fs.h>
 #include <kos/thread.h>
-#include <kos/malloc.h> /* for mallinfo() */
+#include <kos/dlmalloc.h> /* for mallinfo() */
 
 #include <unistd.h>
 #include <errno.h>

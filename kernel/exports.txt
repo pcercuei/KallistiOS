@@ -9,6 +9,7 @@ include assert.h
 include stdlib.h
 include stdio.h
 include strings.h
+include kos/dlmalloc.h
 
 # Malloc
 malloc
