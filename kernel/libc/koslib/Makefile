@@ -8,7 +8,7 @@
 # useful in the context of KOS to go with the Newlib defaults.
 
 OBJS = abort.o byteorder.o memset2.o memset4.o memcpy2.o memcpy4.o \
-	assert.o dbglog.o malloc.o \
+	assert.o dbglog.o dlmalloc.o \
 	opendir.o readdir.o closedir.o rewinddir.o scandir.o seekdir.o \
 	telldir.o usleep.o inet_addr.o realpath.o getcwd.o chdir.o mkdir.o \
 	creat.o sleep.o rmdir.o rename.o inet_pton.o inet_ntop.o \
