@@ -16,7 +16,7 @@ malloc
 calloc
 free
 realloc
-memalign
+aligned_alloc
 valloc
 mallinfo
 malloc_stats
