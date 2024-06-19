@@ -255,6 +255,37 @@ int mutex_unlock(mutex_t *m);
 */
 int mutex_unlock_as_thread(mutex_t *m, kthread_t *thd);
 
+/** \cond */
+static inline void __mutex_scoped_cleanup(mutex_t **m) {
+    mutex_unlock(*m);
+}
+
+#define ___mutex_lock_scoped(m, l) ({ \
+    mutex_t *__scoped_mutex_##l __attribute__((cleanup(__mutex_scoped_cleanup))) = (m); \
+    mutex_lock(m); \
+    })
+
+#define __mutex_lock_scoped(m, l) ___mutex_lock_scoped(m, l)
+/** \endcond */
+
+/** \brief  Lock a mutex with scope management
+
+    This macro will lock a mutex, similarly to mutex_lock, with the difference
+    that the mutex will automatically be unlocked once the execution exits the
+    functional block in which the macro was called.
+
+    \param  m               The mutex to acquire
+    \retval 0               On success
+    \retval -1              On error, sets errno as appropriate
+
+    \par    Error Conditions:
+    \em     EPERM - called inside an interrupt \n
+    \em     EINVAL - the mutex has not been initialized properly \n
+    \em     EAGAIN - lock has been acquired too many times (recursive) \n
+    \em     EDEADLK - would deadlock (error-checking)
+*/
+#define mutex_lock_scoped(m) __mutex_lock_scoped((m), __LINE__)
+
 __END_DECLS
 
 #endif  /* __KOS_MUTEX_H */
