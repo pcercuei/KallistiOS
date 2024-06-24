@@ -8,7 +8,7 @@
 
 extern unsigned char romdisk[];
 
-void *__kos_romdisk = romdisk;
+const void *__kos_romdisk = romdisk;
 
 extern void fs_romdisk_mount_builtin(void);
 
