@@ -271,7 +271,7 @@ static int bread_cache(cache_block_t **cache, uint32 sector) {
     }
 
     /* Load the requested block */
-    j = cdrom_read_sectors(cache[i]->data, sector + 150, 1);
+    j = cdrom_read_sectors_ex(cache[i]->data, sector + 150, 1, CDROM_READ_DMA);
 
     if(j < 0) {
         //dbglog(DBG_ERROR, "fs_iso9660: can't read_sectors for %d: %d\n",
@@ -1087,8 +1087,8 @@ void fs_iso9660_init(void) {
     mutex_init(&cache_mutex, MUTEX_TYPE_NORMAL);
     mutex_init(&fh_mutex, MUTEX_TYPE_NORMAL);
 
-    /* Allocate cache block space */
-    cache_data = malloc(2 * NUM_CACHE_BLOCKS * 2048);
+    /* Allocate cache block space, properly aligned for DMA access */
+    cache_data = memalign(32, 2 * NUM_CACHE_BLOCKS * 2048);
     caches = malloc(2 * NUM_CACHE_BLOCKS * sizeof(cache_block_t));
 
     for(i = 0; i < NUM_CACHE_BLOCKS; i++) {
