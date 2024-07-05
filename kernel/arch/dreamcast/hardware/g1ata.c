@@ -170,6 +170,9 @@ static uint8_t orig_dev = 0x00;
 /* Variables related to DMA. */
 static int dma_in_progress = 0;
 static int dma_blocking = 0;
+static uint8_t dma_cmd = 0;
+static size_t dma_nb_sectors = 0;
+static uint64_t dma_sector = 0;
 static semaphore_t dma_done = SEM_INITIALIZER(0);
 static kthread_t *dma_thd = NULL;
 
@@ -229,11 +232,29 @@ static void g1_ata_set_sector_and_count(uint64_t sector, uint32_t count, int lba
 }
 
 static void g1_dma_irq_hnd(uint32 code, void *data) {
+    unsigned int nb_sectors;
+
     /* XXXX: Probably should look at the code to make sure it isn't an error. */
     (void)code;
     (void)data;
 
-    if(dma_in_progress) {
+    if(dma_in_progress && dma_nb_sectors > 256) {
+        dma_sector += 256;
+        dma_nb_sectors -= 256;
+        nb_sectors = dma_nb_sectors <= 256 ? dma_nb_sectors : 256;
+
+        /* Set the DMA parameters for the next transfer. */
+        g1_ata_set_sector_and_count(dma_sector, nb_sectors, 1);
+        OUT32(G1_ATA_DMA_ADDRESS, IN32(G1_ATA_DMA_ADDRESS) + 256 * 512);
+        OUT32(G1_ATA_DMA_LENGTH, nb_sectors * 512);
+
+        /* Write out the command to the device. */
+        OUT8(G1_ATA_COMMAND_REG, dma_cmd);
+
+        /* Re-start the DMA transfer. */
+        OUT32(G1_ATA_DMA_STATUS, 1);
+    }
+    else if(dma_in_progress) {
         /* Signal the calling thread to continue, if it is blocking. */
         if(dma_blocking) {
             sem_signal(&dma_done);
@@ -299,6 +320,8 @@ static inline int g1_ata_wait_drq(void) {
 static int dma_common(uint8_t cmd, size_t nsects, uint32_t addr, int dir,
                       int block) {
     uint8_t status;
+
+    dma_cmd = cmd;
 
     /* Set the thread ID that initiated this DMA. */
     dma_thd = thd_current;
@@ -621,7 +644,7 @@ int g1_ata_read_lba_dma(uint64_t sector, size_t count, void *buf,
     }
 
     /* Chaining isn't done yet, so make sure we don't need to. */
-    if(count > 65536 || (!can_lba48 && count > 256)) {
+    if(count > 65536) {
         errno = EOVERFLOW;
         return -1;
     }
@@ -663,7 +686,12 @@ int g1_ata_read_lba_dma(uint64_t sector, size_t count, void *buf,
     /* Set the settings for this transfer and re-enable IRQs. */
     dma_blocking = block;
     dma_in_progress = 1;
+    dma_nb_sectors = count;
+    dma_sector = sector;
     irq_restore(old);
+
+    if(!can_lba48 && count > 256)
+        count = 256;
 
     /* Wait for the device to signal it is ready. */
     g1_ata_wait_bsydrq();
@@ -838,6 +866,8 @@ int g1_ata_write_lba_dma(uint64_t sector, size_t count, const void *buf,
     /* Set the settings for this transfer and re-enable IRQs. */
     dma_blocking = block;
     dma_in_progress = 1;
+    dma_nb_sectors = count;
+    dma_sector = sector;
     irq_restore(old);
 
     /* Wait for the device to signal it is ready. */
