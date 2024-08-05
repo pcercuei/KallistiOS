@@ -862,3 +862,7 @@ int main() {
 }
 
 
+int _getentropy_r(void)
+{
+	return 0;
+}
