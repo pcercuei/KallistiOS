@@ -228,7 +228,7 @@ typedef struct timer_value {
    plus a shift for optimized division. */
 static timer_val_t timer_getticks(const uint32_t *tns, uint32_t shift) {
     uint32_t secs, unf1, unf2, counter1, counter2, delta, ticks;
-    uint16_t tmu2 = TIMER16(tcrs[TMU2]);
+    uint16_t tmu2;
     
     do {
         /* Read the underflow flag twice, and the counter twice.
@@ -250,13 +250,14 @@ static timer_val_t timer_getticks(const uint32_t *tns, uint32_t shift) {
            underflows between the moment where you compute the
            seconds value, and the moment where you read the timer.
            It also does not require the interrupts to be masked. */
+        counter1 = TIMER32(tcnts[TMU2]);
+        tmu2 = TIMER16(tcrs[TMU2]);
         unf1 = !!(tmu2 & UNF);
         secs = timer_ms_counter + unf1;
-        counter1 = TIMER32(tcnts[TMU2]);
 
+        counter2 = TIMER32(tcnts[TMU2]);
         tmu2 = TIMER16(tcrs[TMU2]);
         unf2 = !!(tmu2 & UNF);
-        counter2 = TIMER32(tcnts[TMU2]);
     } while (unf1 != unf2 || counter1 < counter2);
 
     delta = timer_ms_countdown - counter2;
