@@ -169,29 +169,29 @@ void timer_spin_sleep(int ms) {
    to irq.c sometime. */
 void timer_enable_ints(int which) {
     volatile uint16_t *ipra = (uint16_t *)0xffd00004;
-    *ipra |= (0x000f << (12 - 4 * which));
+    *ipra |= (TIMER_PRIO << (12 - 4 * which));
 }
 
 /* Disable timer interrupts; needs to move to irq.c sometime. */
 void timer_disable_ints(int which) {
     volatile uint16_t *ipra = (uint16_t *)0xffd00004;
-    *ipra &= ~(0x000f << (12 - 4 * which));
+    *ipra &= ~(TIMER_PRIO << (12 - 4 * which));
 }
 
 /* Check whether ints are enabled */
 int timer_ints_enabled(int which) {
     volatile uint16_t *ipra = (uint16_t *)0xffd00004;
-    return (*ipra & (0x000f << (12 - 4 * which))) != 0;
+    return (*ipra & (TIMER_PRIO << (12 - 4 * which))) != 0;
 }
 
 /* Millisecond timer */
-static uint32_t timer_ms_counter = 0; /* Seconds elapsed */
+static uint32_t timer_ms_sec_counter = 0; /* Seconds elapsed */
 static uint32_t timer_ms_countdown;   /* Max counter value */
 
 static void timer_ms_handler(irq_t source, irq_context_t *context) {
     (void)source;
     (void)context;
-    timer_ms_counter++;
+    timer_ms_sec_counter++;
 
     /* Clear overflow bit so we can check it when returning time */
     TIMER16(tcrs[TMU2]) &= ~(1 << UNF);
@@ -214,9 +214,8 @@ void timer_ms_disable(void) {
 static void timer_getticks(uint32_t *secs, uint32_t *ticks, uint32_t div) {
     int irq_status = irq_disable();
 
-    /* Seconds part comes from ms_counter */
     if(secs) {
-        *secs = timer_ms_counter;
+        *secs = timer_ms_sec_counter;
 
         /* Overflow is only notable if we have seconds we can
            overflow into, so avoid read of TCR if secs is null */
