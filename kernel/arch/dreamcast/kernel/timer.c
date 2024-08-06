@@ -71,7 +71,7 @@ static unsigned tdiv[] = { 4, 16, 64, 256, 1024 };
 static unsigned tns[] = { 80, 320, 1280, 5120, 20480 };
 
 /* Timer TPSC values (4 for highest resolution timings) */
-#define TIMER_TPSC      PCK_DIV_64
+#define TIMER_TPSC      PCK_DIV_4
 /* Timer IRQ priority levels (0-15) */
 #define TIMER_PRIO      15
 
