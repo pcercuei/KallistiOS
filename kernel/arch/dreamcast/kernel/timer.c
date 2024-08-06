@@ -129,6 +129,12 @@ int timer_stop(int which) {
     return 0;
 }
 
+int timer_running(int which) {
+    assert(which <= TMU2);
+
+    return !!(TIMER8(TSTR) & (1 << which));
+}
+
 /* Returns the count value of a timer */
 uint32_t timer_count(int which) {
     assert(which <= TMU2);
