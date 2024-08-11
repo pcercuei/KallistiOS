@@ -210,15 +210,6 @@ typedef struct vfs_handler {
 */
 #define FD_SETSIZE  1024
 
-/** \cond */
-/* This is the private struct that will be used as raw file handles
-   underlying descriptors. */
-struct fs_hnd;
-
-/* The kernel-wide file descriptor table. These will reference to open files. */
-extern struct fs_hnd *fd_table[FD_SETSIZE];
-/** \endcond */
-
 /* Open modes */
 #include <sys/fcntl.h>
 

@@ -40,6 +40,10 @@ something like this:
 #include <kos/nmmgr.h>
 #include <kos/dbgio.h>
 
+#define ARRAY_SIZE(x) (sizeof(x) ? sizeof(x) / sizeof((x)[0]) : 0)
+
+static uint32_t fd_mask[FD_SETSIZE / 32];
+
 /* File handle structure; this is an entirely internal structure so it does
    not go in a header file. */
 typedef struct fs_hnd {
@@ -48,12 +52,16 @@ typedef struct fs_hnd {
     int     refcnt;     /* Reference count */
 } fs_hnd_t;
 
-/* The global file descriptor table */
-fs_hnd_t * fd_table[FD_SETSIZE] = { NULL };
-
 /* Internal file commands for root dir reading */
 static fs_hnd_t * fs_root_opendir(void) {
-    return calloc(1, sizeof(fs_hnd_t));
+    fs_hnd_t *hnd = memalign(8, sizeof(*hnd));
+
+    if(!hnd)
+        return NULL;
+
+    memset(hnd, 0, sizeof(*hnd));
+
+    return hnd;
 }
 
 /* Not thread-safe right now */
@@ -142,7 +150,7 @@ static fs_hnd_t * fs_hnd_open(const char *fn, int mode) {
     if(h == NULL) return NULL;
 
     /* Wrap it up in a structure */
-    hnd = malloc(sizeof(fs_hnd_t));
+    hnd = memalign(8, sizeof(fs_hnd_t));
 
     if(hnd == NULL) {
         cur->close(h);
@@ -184,40 +192,48 @@ static int fs_hnd_unref(fs_hnd_t *ref) {
     return retval;
 }
 
-/* Assigns a file descriptor (index) to a file handle (pointer). Will auto-
-   reference the handle, and unrefs on error. */
-static int fs_hnd_assign(fs_hnd_t * hnd) {
-    int i;
-
-    fs_hnd_ref(hnd);
-
-    /* XXX Not thread-safe! */
-    for(i = 0; i < FD_SETSIZE; i++)
-        if(!fd_table[i])
-            break;
-
-    if(i >= FD_SETSIZE) {
-        fs_hnd_unref(hnd);
-        errno = EMFILE;
-        return -1;
-    }
-
-    fd_table[i] = hnd;
-
-    return i;
+static void fs_fd_open(unsigned int fd_num) {
+    fd_mask[fd_num >> 5] |= 1 << (fd_num & 0x1f);
 }
 
-int fs_fdtbl_destroy(void) {
-    int i;
+static void fs_fd_close(unsigned int fd_num) {
+    fd_mask[fd_num >> 5] &= ~(1 << (fd_num & 0x1f));
+}
 
-    for(i = 0; i < FD_SETSIZE; i++) {
-        if(fd_table[i])
-            fs_hnd_unref(fd_table[i]);
+static int fs_fd_is_opened(unsigned int fd_num) {
+    return !!(fd_mask[fd_num >> 5] & (1 << (fd_num & 0x1f)));
+}
 
-        fd_table[i] = NULL;
+/* Assigns a file descriptor (index) to a file handle (pointer). Will auto-
+   reference the handle, and unrefs on error. */
+static file_t fs_hnd_assign(fs_hnd_t * hnd) {
+    unsigned int i, fd_num;
+    uint32_t fake_ptr;
+
+    /* TODO: Disable IRQs for atomicity */
+
+    /* Get a number for the file descriptor */
+    for (i = 0; i < ARRAY_SIZE(fd_mask); i++) {
+        fd_num = __builtin_ffs(~fd_mask[i]);
+        if (fd_num) {
+            fd_num += 32 * i - 1;
+            break;
+        }
     }
 
-    return 0;
+    if (i == ARRAY_SIZE(fd_mask))
+        return -1;
+
+    fs_hnd_ref(hnd);
+    fs_fd_open(fd_num);
+
+    /* Transform the allocated pointer into an opaque object that contains both
+     * the pointer, and a 10-bit value that corresponds to the file descriptor
+     * number. Abuse the fact that we know the upper 7 bits (0x8c000000), and
+     * the lower 3 bits (zero, as the structures are aligned to 8 bytes). */
+    fake_ptr = ((uint32_t)hnd << 7) | fd_num;
+
+    return (file_t)fake_ptr;
 }
 
 /* Attempt to open a file, given a path name. Follows the process described
@@ -240,7 +256,7 @@ file_t fs_open_handle(vfs_handler_t * vfs, void * vhnd) {
     fs_hnd_t * hnd;
 
     /* Wrap it up in a structure */
-    hnd = malloc(sizeof(fs_hnd_t));
+    hnd = memalign(8, sizeof(fs_hnd_t));
 
     if(hnd == NULL) {
         errno = ENOMEM;
@@ -255,74 +271,55 @@ file_t fs_open_handle(vfs_handler_t * vfs, void * vhnd) {
     return fs_hnd_assign(hnd);
 }
 
-vfs_handler_t * fs_get_handler(file_t fd) {
-    /* Make sure it exists */
-    if(!fd_table[fd]) {
-        errno = EBADF;
-        return NULL;
-    }
-
-    return fd_table[fd]->handler;
-}
-
-void * fs_get_handle(file_t fd) {
-    /* Make sure it exists */
-    if(!fd_table[fd]) {
-        errno = EBADF;
-        return NULL;
-    }
-
-    return fd_table[fd]->hnd;
-}
-
-file_t fs_dup(file_t oldfd) {
-    /* Make sure it exists */
-    if(oldfd < 0 || oldfd >= FD_SETSIZE) {
-        errno = EBADF;
-        return -1;
-    }
-    else if(!fd_table[oldfd]) {
-        errno = EBADF;
-        return -1;
-    }
-
-    return fs_hnd_assign(fd_table[oldfd]);
-}
-
-file_t fs_dup2(file_t oldfd, file_t newfd) {
-    /* Make sure the descriptors are valid */
-    if(oldfd < 0 || oldfd >= FD_SETSIZE || newfd < 0 || newfd >= FD_SETSIZE) {
-        errno = EBADF;
-        return -1;
-    }
-    else if(!fd_table[oldfd]) {
-        errno = EBADF;
-        return -1;
-    }
-
-    if(fd_table[newfd])
-        fs_close(newfd);
-
-    fd_table[newfd] = fd_table[oldfd];
-    fs_hnd_ref(fd_table[newfd]);
-
-    return newfd;
-}
-
 /* Returns a file handle for a given fd, or NULL if the parameters
    are not valid. */
 static fs_hnd_t * fs_map_hnd(file_t fd) {
-    if(fd < 0 || fd >= FD_SETSIZE) {
-        errno = EBADF;
+    if(fs_fd_is_opened((uint32_t)fd & 0x3ff))
+        return (fs_hnd_t *)((((uint32_t)fd >> 7) & ~0x7) | 0x8c000000);
+
+    return NULL;
+}
+
+vfs_handler_t * fs_get_handler(file_t fd) {
+    fs_hnd_t *hnd = fs_map_hnd(fd);
+
+    if (!hnd)
         return NULL;
+
+    return hnd ? hnd->handler : NULL;
+}
+
+void * fs_get_handle(file_t fd) {
+    fs_hnd_t *hnd = fs_map_hnd(fd);
+
+    return hnd ? hnd->hnd : NULL;
+}
+
+file_t fs_dup(file_t oldfd) {
+    fs_hnd_t *hnd = fs_map_hnd(oldfd);
+
+    return fs_hnd_assign(hnd);
+}
+
+file_t fs_dup2(file_t oldfd, file_t newfd) {
+    fs_hnd_t *hnd;
+
+    /* Make sure the descriptors are valid */
+    hnd = fs_map_hnd(oldfd);
+    if(!hnd) {
+        errno = EBADF;
+        return -1;
     }
 
-    if(!fd_table[fd]) {
-        errno = EBADF;
-        return NULL;
-    }
+    fs_hnd_ref(hnd);
 
-    return fd_table[fd];
+    hnd = fs_map_hnd(newfd);
+    if(hnd)
+        fs_close(newfd);
+
+    fs_fd_open((uint32_t)newfd & 0x3ff);
+
+    return (oldfd & ~0x3ff) | (newfd & 0x3ff);
 }
 
 /* Close a file and clean up the handle */
@@ -335,9 +332,10 @@ int fs_close(file_t fd) {
       return -1;
     }
 
+    fs_fd_close((uint32_t)fd & 0x3ff);
+
     /* Deref it and remove it from our table */
     retval = fs_hnd_unref(hnd);
-    fd_table[fd] = NULL;
     return retval ? -1 : 0;
 }
 
@@ -902,5 +900,4 @@ int fs_init(void) {
 }
 
 void fs_shutdown(void) {
-    fs_fdtbl_destroy();
 }
