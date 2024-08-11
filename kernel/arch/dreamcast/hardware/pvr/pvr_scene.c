@@ -176,11 +176,6 @@ int pvr_list_finish(void) {
 #endif  /* !NDEBUG */
 
     if(!pvr_state.dma_mode) {
-        /* Release Store Queues if they are used */
-        if(pvr_state.dr_used) {
-            pvr_dr_finish();
-        }
-
         /* In case we haven't sent anything in this list, send a dummy */
         pvr_blank_polyhdr(pvr_state.list_reg_open);
 
@@ -232,17 +227,6 @@ int pvr_list_prim(pvr_list_t list, void * data, int size) {
     return 0;
 }
 
-void pvr_dr_init(pvr_dr_state_t *vtx_buf_ptr) {
-    *vtx_buf_ptr = 0;
-    sq_lock((void *)PVR_TA_INPUT);
-    pvr_state.dr_used = 1;
-}
-
-void pvr_dr_finish(void) {
-    pvr_state.dr_used = 0;
-    sq_unlock();
-}
-
 int pvr_list_flush(pvr_list_t list) {
     (void)list;
 
@@ -257,11 +241,6 @@ int pvr_list_flush(pvr_list_t list) {
 int pvr_scene_finish(void) {
     int i, o;
     volatile pvr_dma_buffers_t * b;
-
-    /* Release Store Queues if they are used */
-    if(pvr_state.dr_used) {
-        pvr_dr_finish();
-    }
 
     // If we're in DMA mode, then this works a little differently...
     if(pvr_state.dma_mode) {
@@ -350,4 +329,19 @@ int pvr_check_ready(void) {
         return 0;
     else
         return -1;
+}
+
+void * pvr_dr_get(pvr_dr_state_t *state)
+{
+    sq_lock((void *)PVR_TA_INPUT);
+
+    *state ^= 32;
+
+    return (void *)(MEM_AREA_SQ_BASE | (*state & 32));
+}
+
+void pvr_dr_put(void *addr)
+{
+	sq_flush(addr);
+	sq_unlock();
 }
