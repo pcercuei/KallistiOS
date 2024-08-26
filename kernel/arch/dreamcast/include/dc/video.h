@@ -355,7 +355,7 @@ void vid_set_enabled(bool val);
 /** \brief   Wait for VBlank.
     \ingroup video_misc
 
-    This function busy loops until the vertical blanking period starts.
+    This function sleeps until the vertical blanking period starts.
 */
 void vid_waitvbl(void);
 

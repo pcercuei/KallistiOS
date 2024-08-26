@@ -7,9 +7,11 @@
    Copyright (C) 2023-2024 Donald Haase
  */
 
+#include <dc/vblank.h>
 #include <dc/video.h>
 #include <dc/pvr.h>
 #include <dc/sq.h>
+#include <kos/genwait.h>
 #include <kos/platform.h>
 #include <string.h>
 #include <stdio.h>
@@ -193,6 +195,9 @@ static vid_mode_t  currmode = { 0 };
 vid_mode_t  *vid_mode = 0;
 uint16_t      *vram_s;
 uint32_t      *vram_l;
+
+static int vblank_hdl;
+static int vblank_genwait_obj;
 
 /*-----------------------------------------------------------------------------*/
 /* Checks the attached cable type (to the A/V port). Returns
@@ -581,11 +586,14 @@ void vid_set_enabled(bool val) {
 
 */
 void vid_waitvbl(void) {
-    while(!(PVR_GET(PVR_SYNC_STATUS) & 0x01ff))
-        ;
+    genwait_wait(&vblank_genwait_obj, "vblank", 100, NULL);
+}
 
-    while(PVR_GET(PVR_SYNC_STATUS) & 0x01ff)
-        ;
+static void vid_vblank_irq_hdl(uint32_t code, void *data)
+{
+    (void)code;
+
+    genwait_wake_one(data);
 }
 
 /*-----------------------------------------------------------------------------*/
@@ -593,10 +601,14 @@ void vid_init(int disp_mode, vid_pixel_mode_t pixel_mode) {
     /* Set mode and clear vram */
     vid_set_mode(disp_mode, pixel_mode);
     vid_empty();
+
+    vblank_hdl = vblank_handler_add(vid_vblank_irq_hdl, &vblank_genwait_obj);
 }
 
 /*-----------------------------------------------------------------------------*/
 void vid_shutdown(void) {
+    vblank_handler_remove(vblank_hdl);
+
     /* Reset back to default mode, in case we're going back to a loader. */
     vid_init(DM_640x480, PM_RGB565);
 }
