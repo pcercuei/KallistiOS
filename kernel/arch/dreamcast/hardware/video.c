@@ -7,12 +7,14 @@
    Copyright (C) 2023-2024 Donald Haase
  */
 
+#include <arch/irq.h>
 #include <dc/vblank.h>
 #include <dc/video.h>
 #include <dc/pvr.h>
 #include <dc/sq.h>
 #include <kos/genwait.h>
 #include <kos/platform.h>
+#include <kos/thread.h>
 #include <string.h>
 #include <stdio.h>
 
@@ -198,6 +200,7 @@ uint32_t      *vram_l;
 
 static int vblank_hdl;
 static int vblank_genwait_obj;
+static kthread_t *vblank_thd;
 
 /*-----------------------------------------------------------------------------*/
 /* Checks the attached cable type (to the A/V port). Returns
@@ -586,7 +589,12 @@ void vid_set_enabled(bool val) {
 
 */
 void vid_waitvbl(void) {
+    int flags = irq_disable();
+
+    vblank_thd = thd_current;
     genwait_wait(&vblank_genwait_obj, "vblank", 100, NULL);
+
+    irq_restore(flags);
 }
 
 static void vid_vblank_irq_hdl(uint32_t code, void *data)
@@ -594,6 +602,11 @@ static void vid_vblank_irq_hdl(uint32_t code, void *data)
     (void)code;
 
     genwait_wake_one(data);
+
+    if (vblank_thd) {
+        thd_schedule_next(vblank_thd);
+        vblank_thd = NULL;
+    }
 }
 
 /*-----------------------------------------------------------------------------*/
