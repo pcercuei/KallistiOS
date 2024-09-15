@@ -48,6 +48,8 @@
 #include <sys/cdefs.h>
 __BEGIN_DECLS
 
+#include <stdbool.h>
+
 #include <arch/types.h>
 #include <sys/uio.h>
 
@@ -386,6 +388,13 @@ mmu_token_t mmu_disable(void);
     \param  token           The opaque token obtained from mmu_disable()
  */
 void mmu_restore(mmu_token_t token);
+
+/** \brief   Check if MMU translation is enabled.
+    \ingroup mmu
+
+    \return                 True if MMU translation is enabled, false otherwise.
+ */
+bool mmu_enabled(void);
 
 __END_DECLS
 
