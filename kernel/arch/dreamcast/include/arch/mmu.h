@@ -396,6 +396,12 @@ void mmu_restore(mmu_token_t token);
  */
 bool mmu_enabled(void);
 
+/** \brief   Reset the base target address for store queues.
+ *  \ingroup mmu
+ *
+ *  \param  addr            The base address to reset to */
+void mmu_set_sq_addr(void *addr);
+
 __END_DECLS
 
 #endif  /* __ARCH_MMU_H */
