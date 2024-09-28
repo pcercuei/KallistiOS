@@ -123,37 +123,47 @@ void sq_wait(void) {
 /* Copies n bytes from src to dest, dest must be 32-byte aligned */
 __attribute__((noinline)) void *sq_cpy(void *dest, const void *src, size_t n) {
     const uint32_t *s = src;
+    void *curr_dest = dest;
     uint32_t *d;
+    size_t nb;
 
     /* Fill/write queues as many times necessary */
     n >>= 5;
 
-    /* Exit early if we dont have enough data to copy */
-    if(n == 0)
-        return dest;
+    while (n > 0) {
+        /* Transfer maximum 1 MiB at once. This is because when using the
+         * MMU the SQ area is 2 MiB, and the destination address may
+         * not be on a page boundary. */
+        nb = n > 0x8000 ? 0x8000 : n;
 
-    d = sq_lock(dest);
+        d = sq_lock(curr_dest);
 
-    /* If src is not 8-byte aligned, slow path */
-    if ((uintptr_t)src & 7) {
-        while(n--) {
-            dcache_pref_block(s + 8); /* Prefetch 32 bytes for next loop */
-            d[0] = *(s++);
-            d[1] = *(s++);
-            d[2] = *(s++);
-            d[3] = *(s++);
-            d[4] = *(s++);
-            d[5] = *(s++);
-            d[6] = *(s++);
-            d[7] = *(s++);
-            sq_flush(d);
-            d += 8;
+        curr_dest += nb * 32;
+        n -= nb;
+
+        /* If src is not 8-byte aligned, slow path */
+        if ((uintptr_t)src & 7) {
+            while(nb--) {
+                dcache_pref_block(s + 8); /* Prefetch 32 bytes for next loop */
+                d[0] = *(s++);
+                d[1] = *(s++);
+                d[2] = *(s++);
+                d[3] = *(s++);
+                d[4] = *(s++);
+                d[5] = *(s++);
+                d[6] = *(s++);
+                d[7] = *(s++);
+                sq_flush(d);
+                d += 8;
+            }
+        } else { /* If src is 8-byte aligned, fast path */
+            sq_fast_cpy(d, s, nb);
+	    s += nb * 32;
         }
-    } else { /* If src is 8-byte aligned, fast path */
-        sq_fast_cpy(d, s, n);
+
+        sq_unlock();
     }
 
-    sq_unlock();
     return dest;
 }
 
