@@ -95,21 +95,12 @@ void pvr_int_handler(uint32 code, void *data) {
     // What kind of event did we get?
     switch(code) {
         case ASIC_EVT_PVR_OPAQUEDONE:
-            //DBG(("irq_opaquedone\n"));
-            pvr_state.lists_transferred |= 1 << PVR_OPB_OP;
-            break;
         case ASIC_EVT_PVR_TRANSDONE:
-            //DBG(("irq_transdone\n"));
-            pvr_state.lists_transferred |= 1 << PVR_OPB_TP;
-            break;
         case ASIC_EVT_PVR_OPAQUEMODDONE:
-            pvr_state.lists_transferred |= 1 << PVR_OPB_OM;
-            break;
         case ASIC_EVT_PVR_TRANSMODDONE:
-            pvr_state.lists_transferred |= 1 << PVR_OPB_TM;
-            break;
         case ASIC_EVT_PVR_PTDONE:
-            pvr_state.lists_transferred |= 1 << PVR_OPB_PT;
+            pvr_state.lists_transferred = 1;
+            pvr_sync_stats(PVR_SYNC_REGDONE);
             break;
         case ASIC_EVT_PVR_RENDERDONE_TSP:
             //DBG(("irq_renderdone\n"));
@@ -151,28 +142,11 @@ void pvr_int_handler(uint32 code, void *data) {
     }
 #endif
 
-    /* Update our stats if we finished all registration */
-    switch(code) {
-        case ASIC_EVT_PVR_OPAQUEDONE:
-        case ASIC_EVT_PVR_TRANSDONE:
-        case ASIC_EVT_PVR_OPAQUEMODDONE:
-        case ASIC_EVT_PVR_TRANSMODDONE:
-        case ASIC_EVT_PVR_PTDONE:
-
-            if(pvr_state.lists_transferred != pvr_state.lists_enabled)
-                return;
-
-            pvr_sync_stats(PVR_SYNC_REGDONE);
-            break;
-    }
-
-    if(pvr_state.to_texture[bufn]) {
+    if(pvr_state.to_texture[bufn] && !pvr_state.render_completed) {
         // We don't need to wait for a vblank for rendering to a texture, but
         // we really don't care about anything else unless we've actually gotten
         // all the data submitted to the TA.
-        if(pvr_state.lists_transferred != pvr_state.lists_enabled &&
-           !pvr_state.render_completed)
-            return;
+        return;
     }
 
     // If the render-done interrupt has fired then we are ready to flip to the
@@ -196,9 +170,9 @@ void pvr_int_handler(uint32 code, void *data) {
 
     // If all lists are fully transferred and a render is not in progress,
     // we are ready to start rendering.
-    if(!pvr_state.render_busy
-       && !pvr_state.render_completed
-       && pvr_state.lists_transferred == pvr_state.lists_enabled) {
+    if(pvr_state.lists_transferred
+       && !pvr_state.render_busy
+       && !pvr_state.render_completed) {
         /* XXX Note:
            For some reason, the render must be started _before_ we sync
            to the new reg buffers. The only reasons I can think of for this

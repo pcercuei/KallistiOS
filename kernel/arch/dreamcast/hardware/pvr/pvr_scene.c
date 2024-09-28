@@ -11,6 +11,7 @@
 #include <string.h>
 #include <kos/string.h>
 #include <kos/thread.h>
+#include <dc/asic.h>
 #include <dc/pvr.h>
 #include <dc/sq.h>
 #include "pvr_internal.h"
@@ -86,6 +87,14 @@ void pvr_vertbuf_written(pvr_list_t list, uint32 amt) {
     pvr_state.dma_buffers[pvr_state.ram_target].ptr[list] = val;
 }
 
+static uint16_t pvr_list_to_irq[] = {
+    [PVR_OPB_OP] = ASIC_EVT_PVR_OPAQUEDONE,
+    [PVR_OPB_OM] = ASIC_EVT_PVR_OPAQUEMODDONE,
+    [PVR_OPB_TP] = ASIC_EVT_PVR_TRANSDONE,
+    [PVR_OPB_TM] = ASIC_EVT_PVR_TRANSMODDONE,
+    [PVR_OPB_PT] = ASIC_EVT_PVR_PTDONE,
+};
+
 /* Begin collecting data for a frame of 3D output to the off-screen
    frame buffer */
 void pvr_scene_begin(void) {
@@ -93,6 +102,12 @@ void pvr_scene_begin(void) {
 
     // Get general stuff ready.
     pvr_state.list_reg_open = -1;
+
+    // Disable IRQs for all lists.
+    // One of them (the last list enabled that will be transferred)
+    // will be re-enabled in pvr_scene_finish().
+    for(i = 0; i < PVR_OPB_COUNT; i++)
+        asic_evt_disable(pvr_list_to_irq[i], ASIC_IRQ_DEFAULT);
 
     // Clear these out in case we're using DMA.
     if(pvr_state.dma_mode) {
@@ -290,10 +305,24 @@ int pvr_list_flush(pvr_list_t list) {
 int pvr_scene_finish(void) {
     int i, o;
     volatile pvr_dma_buffers_t * b;
+    uint16_t irq;
 
     /* Release Store Queues if they are used */
     if(pvr_state.dr_used) {
         pvr_dr_finish();
+    }
+
+    if (pvr_state.lists_enabled) {
+        i = 31 - __builtin_clz(pvr_state.lists_enabled);
+        irq = pvr_list_to_irq[i];
+
+        /* Re-enable the IRQ that corresponds to the enabled list that
+         * will be transferred last */
+        asic_evt_enable(irq, ASIC_IRQ_DEFAULT);
+    } else {
+        /* Re-enable the opaque list, because we should have at least
+         * one enabled */
+        asic_evt_enable(ASIC_EVT_PVR_OPAQUEDONE, ASIC_IRQ_DEFAULT);
     }
 
     // If we're in DMA mode, then this works a little differently...
