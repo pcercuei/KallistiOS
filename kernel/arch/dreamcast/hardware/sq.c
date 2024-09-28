@@ -56,9 +56,7 @@
 static mutex_t sq_mutex = RECURSIVE_MUTEX_INITIALIZER;
 
 typedef struct sq_state {
-    uint8_t dest0;
-    uint8_t dest1;
-    mmu_token_t mmu_token;
+    uint32_t dest;
 } sq_state_t;
 
 #ifndef SQ_STATE_CACHE_SIZE
@@ -67,8 +65,10 @@ typedef struct sq_state {
 
 static sq_state_t sq_state_cache[SQ_STATE_CACHE_SIZE] = {0};
 
-void sq_lock(void *dest) {
+uint32_t *sq_lock(void *dest) {
     sq_state_t *new_state;
+    bool with_mmu;
+    uint32_t mask;
 
     mutex_lock(&sq_mutex);
 
@@ -76,17 +76,22 @@ void sq_lock(void *dest) {
 
     new_state = &sq_state_cache[sq_mutex.count - 1];
 
-    /* Disable MMU, because SQs work differently when it's enabled, and we
-     * don't support it. */
-    new_state->mmu_token = mmu_disable();
+    new_state->dest = (uint32_t)dest;
 
-    new_state->dest0 = new_state->dest1 = QACR_EXTERN_BITS(dest);
+    with_mmu = mmu_enabled();
+    mask = with_mmu ? 0x000fffe0 : 0x03ffffe0;
 
-    SET_QACR_REGS_INNER(new_state->dest0, new_state->dest1);
+    if (with_mmu)
+        mmu_set_sq_addr(dest);
+    else
+        SET_QACR_REGS(dest, dest);
+
+    return (uint32_t *)(MEM_AREA_SQ_BASE | ((uintptr_t)dest & mask));
 }
 
 void sq_unlock(void) {
     sq_state_t *tmp_state;
+    bool with_mmu;
 
     if(sq_mutex.count == 0) {
         dbglog(DBG_WARNING, "sq_unlock: Called without any lock\n");
@@ -95,13 +100,15 @@ void sq_unlock(void) {
 
     tmp_state = &sq_state_cache[sq_mutex.count - 1];
 
-    /* Restore the mmu state that we had started with */
-    mmu_restore(tmp_state->mmu_token);
-
     /* If we aren't the last entry, set the regs back where they belong */
     if(sq_mutex.count - 1) {
         tmp_state = &sq_state_cache[sq_mutex.count - 2];
-        SET_QACR_REGS_INNER(tmp_state->dest0, tmp_state->dest1);
+        with_mmu = mmu_enabled();
+
+        if (with_mmu)
+            mmu_set_sq_addr((void *)tmp_state->dest);
+        else
+            SET_QACR_REGS(tmp_state->dest, tmp_state->dest);
     }
 
     mutex_unlock(&sq_mutex);
@@ -115,8 +122,8 @@ void sq_wait(void) {
 
 /* Copies n bytes from src to dest, dest must be 32-byte aligned */
 __attribute__((noinline)) void *sq_cpy(void *dest, const void *src, size_t n) {
-    uint32_t *d = SQ_MASK_DEST(dest);
     const uint32_t *s = src;
+    uint32_t *d;
 
     /* Fill/write queues as many times necessary */
     n >>= 5;
@@ -125,7 +132,7 @@ __attribute__((noinline)) void *sq_cpy(void *dest, const void *src, size_t n) {
     if(n == 0)
         return dest;
 
-    sq_lock(dest);
+    d = sq_lock(dest);
 
     /* If src is not 8-byte aligned, slow path */
     if ((uintptr_t)src & 7) {
@@ -170,7 +177,7 @@ void *sq_set16(void *dest, uint32_t c, size_t n) {
 
 /* Fills n bytes at dest with int c, dest must be 32-byte aligned */
 void *sq_set32(void *dest, uint32_t c, size_t n) {
-    uint32_t *d = SQ_MASK_DEST(dest);
+    uint32_t *d;
 
     /* Write them as many times necessary */
     n >>= 5;
@@ -179,7 +186,7 @@ void *sq_set32(void *dest, uint32_t c, size_t n) {
     if(n == 0)
         return dest;
 
-    sq_lock(dest);
+    d = sq_lock(dest);
 
     while(n--) {
         /* Fill both store queues with c */
