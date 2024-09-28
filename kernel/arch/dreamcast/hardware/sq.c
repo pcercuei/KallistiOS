@@ -187,25 +187,34 @@ void *sq_set16(void *dest, uint32_t c, size_t n) {
 
 /* Fills n bytes at dest with int c, dest must be 32-byte aligned */
 void *sq_set32(void *dest, uint32_t c, size_t n) {
+    void *curr_dest = dest;
     uint32_t *d;
+    size_t nb;
 
     /* Write them as many times necessary */
     n >>= 5;
 
-    /* Exit early if we dont have enough data to set */
-    if(n == 0)
-        return dest;
+    while (n > 0) {
+        /* Transfer maximum 1 MiB at once. This is because when using the
+         * MMU the SQ area is 2 MiB, and the destination address may
+         * not be on a page boundary. */
+        nb = n > 0x8000 ? 0x8000 : n;
 
-    d = sq_lock(dest);
+        d = sq_lock(curr_dest);
 
-    while(n--) {
-        /* Fill both store queues with c */
-        d[0] = d[1] = d[2] = d[3] = d[4] = d[5] = d[6] = d[7] = c;
-        sq_flush(d);
-        d += 8;
+        curr_dest += nb * 32;
+        n -= nb;
+
+        while(nb--) {
+            /* Fill both store queues with c */
+            d[0] = d[1] = d[2] = d[3] = d[4] = d[5] = d[6] = d[7] = c;
+            sq_flush(d);
+            d += 8;
+        }
+
+        sq_unlock();
     }
 
-    sq_unlock();
     return dest;
 }
 
