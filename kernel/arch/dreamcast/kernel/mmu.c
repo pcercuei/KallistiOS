@@ -777,18 +777,6 @@ bool mmu_enabled(void) {
     return *mmucr & 0x1;
 }
 
-mmu_token_t mmu_disable(void) {
-    mmu_token_t token = (mmu_token_t)*mmucr;
-
-    *mmucr &= ~0x1;
-
-    return token;
-}
-
-void mmu_restore(mmu_token_t token) {
-    *mmucr = (uint32)token;
-}
-
 void mmu_set_sq_addr(void *addr) {
     uint32_t ppn1 = (uint32_t)addr & 0x1ff00000;
     uint32_t ppn2 = ppn1 + 0x00100000;

@@ -197,9 +197,6 @@ typedef struct mmucontext {
     to do so.
 */
 extern mmucontext_t *mmu_cxt_current;
-
-struct mmu_token;
-typedef struct mmu_token *mmu_token_t;
 /** \endcond */
 
 /** \brief   Set the "current" page tables for TLB handling.
@@ -374,20 +371,6 @@ void mmu_shutdown(void);
     \ingroup mmu
  */
 void mmu_reset_itlb(void);
-
-/** \brief   Temporarily disable MMU address translation.
-    \ingroup mmu
-
-    \return                 An opaque token to be passed to mmu_restore()
- */
-mmu_token_t mmu_disable(void);
-
-/** \brief   Restore MMU address translation.
-    \ingroup mmu
-
-    \param  token           The opaque token obtained from mmu_disable()
- */
-void mmu_restore(mmu_token_t token);
 
 /** \brief   Check if MMU translation is enabled.
     \ingroup mmu
