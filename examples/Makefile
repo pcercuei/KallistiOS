@@ -24,7 +24,7 @@ all: $(DIRS)
 	exit $$error_count
 
 $(DIRS):
-	@$(MAKE) -C $@ ; \
+	@$(MAKE) -C $@ all_$(KOS_SUBARCH) ; \
 	rv=$$? ; \
 	if [ "$$rv" -ne 0 ]; then \
 		echo "$(subst $(shell pwd)/,,$@): Build failed with return code $$rv" >> errors.txt; \
