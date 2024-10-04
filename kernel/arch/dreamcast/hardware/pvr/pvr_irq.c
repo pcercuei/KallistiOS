@@ -159,19 +159,14 @@ void pvr_int_handler(uint32 code, void *data) {
         case ASIC_EVT_PVR_TRANSMODDONE:
         case ASIC_EVT_PVR_PTDONE:
 
-            if(pvr_state.lists_transferred == pvr_state.lists_enabled) {
-                pvr_sync_stats(PVR_SYNC_REGDONE);
-            }
+            if(pvr_state.lists_transferred != pvr_state.lists_enabled)
+                return;
 
-            return;
+            pvr_sync_stats(PVR_SYNC_REGDONE);
+            break;
     }
 
-    if(!pvr_state.to_texture[bufn]) {
-        // If it's not a vblank, ignore the rest of this for now.
-        if(code != ASIC_EVT_PVR_VBLANK_BEGIN)
-            return;
-    }
-    else {
+    if(pvr_state.to_texture[bufn]) {
         // We don't need to wait for a vblank for rendering to a texture, but
         // we really don't care about anything else unless we've actually gotten
         // all the data submitted to the TA.
@@ -182,7 +177,8 @@ void pvr_int_handler(uint32 code, void *data) {
 
     // If the render-done interrupt has fired then we are ready to flip to the
     // new frame buffer.
-    if(pvr_state.render_completed) {
+    if(code == ASIC_EVT_PVR_VBLANK_BEGIN
+       && pvr_state.render_completed) {
         //DBG(("view(%d)\n", pvr_state.view_target ^ 1));
 
         // Handle PVR stats
@@ -201,7 +197,8 @@ void pvr_int_handler(uint32 code, void *data) {
     // If all lists are fully transferred and a render is not in progress,
     // we are ready to start rendering.
     if(!pvr_state.render_busy
-            && pvr_state.lists_transferred == pvr_state.lists_enabled) {
+       && !pvr_state.render_completed
+       && pvr_state.lists_transferred == pvr_state.lists_enabled) {
         /* XXX Note:
            For some reason, the render must be started _before_ we sync
            to the new reg buffers. The only reasons I can think of for this
