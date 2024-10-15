@@ -115,5 +115,16 @@ void perf_monitor_exit(void);
 */
 void perf_monitor_print(FILE *f);
 
+#define __perf_monitor_if(f, l, tst) ({ \
+    static struct perf_monitor __perf_monitor_##l \
+        __attribute__((section(".monitors"))) = { f, l, }; \
+    __perf_monitor_##l.calls++; \
+    (tst) ? (__perf_monitor_##l.event1++,1) : (__perf_monitor_##l.event0++,0); \
+})
+
+#define _perf_monitor_if(f, l, tst) __perf_monitor_if(f, l, tst)
+
+#define perf_monitor_if(tst) _perf_monitor_if(__func__, __LINE__, tst)
+
 __END_DECLS
 #endif /* __KOS_PERF_MONITOR_H */
