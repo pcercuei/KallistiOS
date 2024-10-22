@@ -25,6 +25,9 @@
 .weak   _arch_stack_16m
 .weak   _arch_stack_32m
 
+.text
+.section	.inittext
+
 _start:
 start:
 	! Disable interrupts (if they're enabled)
