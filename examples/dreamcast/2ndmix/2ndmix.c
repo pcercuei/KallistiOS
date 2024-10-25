@@ -789,6 +789,53 @@ void font_init(void) {
     pvr_poly_compile(&font_header, &tmp);
 }
 
+static void draw_front_buffer(void) {
+    pvr_poly_cxt_t cxt;
+    pvr_vertex_t vert;
+    pvr_poly_hdr_t hdr;
+
+    pvr_poly_cxt_txr(&cxt, PVR_LIST_TR_POLY,
+                     PVR_TXRFMT_RGB565 | PVR_TXRFMT_NONTWIDDLED | PVR_TXRFMT_STRIDE,
+                     1024, 1024, pvr_get_front_buffer(), PVR_FILTER_NONE);
+
+    cxt.txr.alpha = PVR_TXRALPHA_DISABLE;
+    cxt.txr.env = PVR_TXRENV_MODULATEALPHA;
+    cxt.blend.src = PVR_BLEND_SRCALPHA;
+    cxt.blend.dst = PVR_BLEND_INVSRCALPHA;
+
+    pvr_poly_compile(&hdr, &cxt);
+    pvr_prim(&hdr, sizeof(hdr));
+
+    vert.flags = PVR_CMD_VERTEX;
+    vert.x = 0.0f;
+    vert.y = 480.0f;
+    vert.z = 256.0f;
+    vert.u = 0.0f;
+    vert.v = 480.0f / 1024.0f;
+    vert.argb = 0xe0ffffff;
+    vert.oargb = 0;
+    pvr_prim(&vert, sizeof(vert));
+
+    vert.x = 0.0f;
+    vert.y = 0.0f;
+    vert.u = 0.0f;
+    vert.v = 0.0f;
+    pvr_prim(&vert, sizeof(vert));
+
+    vert.x = 640.0f;
+    vert.y = 480.0f;
+    vert.u = 640.0f / 1024.0f;
+    vert.v = 480.0f / 1024.0f;
+    pvr_prim(&vert, sizeof(vert));
+
+    vert.flags = PVR_CMD_VERTEX_EOL;
+    vert.x = 640.0f;
+    vert.y = 0.0f;
+    vert.u = 640.0f / 1024.0f;
+    vert.v = 0.0f;
+    pvr_prim(&vert, sizeof(vert));
+}
+
 /********************************************************************/
 
 int framecnt = 0;
@@ -810,6 +857,8 @@ void draw_one_frame(void) {
 
     /* Draw scrolly */
     font_one_frame();
+
+    draw_front_buffer();
 
     /* Finish up */
     pvr_list_finish();
@@ -837,6 +886,8 @@ int main() {
 
     printf("Initializing new PVR system\n");
     pvr_init(&params);
+
+    PVR_SET(PVR_TEXTURE_MODULO, 640 / 32);
 
     printf("Initializing stars\n");
     stars_init();

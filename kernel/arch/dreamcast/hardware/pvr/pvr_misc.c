@@ -137,6 +137,11 @@ void pvr_sync_stats(int event) {
     }
 }
 
+pvr_ptr_t pvr_get_front_buffer(void)
+{
+    return (pvr_ptr_t)(PVR_RAM_INT_BASE + pvr_state.frame_buffers[pvr_state.view_target].frame);
+}
+
 /* Synchronize the viewed page with what's in pvr_state */
 void pvr_sync_view(void) {
     vid_set_start(pvr_state.frame_buffers[pvr_state.view_target].frame);

@@ -1746,6 +1746,8 @@ void pvr_mem_print_list(void);
 */
 void pvr_mem_stats(void);
 
+pvr_ptr_t pvr_get_front_buffer(void);
+
 /* Scene rendering ***************************************************/
 /** \defgroup   pvr_scene_mgmt  Scene Submission
     \brief                      PowerVR API for submitting scene geometry
