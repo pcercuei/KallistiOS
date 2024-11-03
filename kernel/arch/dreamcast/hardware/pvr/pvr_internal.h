@@ -295,5 +295,6 @@ void pvr_blank_polyhdr_buf(int type, pvr_poly_hdr_t * buf);
 /* Interrupt handler for PVR events */
 void pvr_int_handler(uint32 code, void *data);
 
+void pvr_start_dma(void);
 
 #endif

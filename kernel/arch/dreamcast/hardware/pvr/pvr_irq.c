@@ -84,6 +84,16 @@ static void dma_next_list(void *data) {
     }
 }
 
+void pvr_start_dma(void) {
+    pvr_sync_stats(PVR_SYNC_REGSTART);
+
+    mutex_lock((mutex_t *)&pvr_state.dma_lock);
+
+    // Begin DMAing the first list.
+    pvr_state.ta_busy = 1;
+    dma_next_list(0);
+}
+
 void pvr_int_handler(uint32 code, void *data) {
     int bufn = pvr_state.view_target;
 
@@ -226,18 +236,5 @@ void pvr_int_handler(uint32 code, void *data) {
 
         // The TA is no longer busy.
         pvr_state.ta_busy = 0;
-    }
-
-    // If we're in DMA mode, the DMA source buffers are ready, and a DMA
-    // is not in progress, then we are ready to start DMAing.
-    if(pvr_state.dma_mode
-            && !pvr_state.ta_busy
-            && pvr_state.dma_buffers[pvr_state.ram_target ^ 1].ready
-            && mutex_trylock((mutex_t *)&pvr_state.dma_lock) >= 0) {
-        pvr_sync_stats(PVR_SYNC_REGSTART);
-
-        // Begin DMAing the first list.
-        pvr_state.ta_busy = 1;
-        dma_next_list(0);
     }
 }
