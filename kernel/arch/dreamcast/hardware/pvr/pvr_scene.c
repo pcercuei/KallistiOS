@@ -88,6 +88,12 @@ void pvr_vertbuf_written(pvr_list_t list, uint32 amt) {
 }
 
 static void pvr_start_ta_rendering(void) {
+    // Make sure to wait until the TA is ready to start rendering a new scene
+    if(!pvr_state.ta_ready) {
+        pvr_wait_ready();
+        pvr_state.ta_ready = 1;
+    }
+
     // Starting from that point, we consider that the Tile Accelerator
     // might be busy.
     pvr_state.ta_busy = 1;
@@ -98,7 +104,7 @@ static void pvr_start_ta_rendering(void) {
 void pvr_scene_begin(void) {
     int i;
 
-    pvr_start_ta_rendering();
+    pvr_state.ta_ready = 0;
 
     // Get general stuff ready.
     pvr_state.list_reg_open = -1;
@@ -173,8 +179,10 @@ int pvr_list_begin(pvr_list_t list) {
 
     pvr_list_dma = pvr_list_uses_dma(list);
 
-    if(!pvr_list_dma)
+    if(!pvr_list_dma) {
+        pvr_start_ta_rendering();
         sq_lock((void *)PVR_TA_INPUT);
+    }
 
     /* Ok, set the flag */
     pvr_state.list_reg_open = list;
@@ -334,6 +342,8 @@ int pvr_scene_finish(void) {
             // Verify that there is no overrun.
             assert(b->ptr[i] <= b->size[i]);
         }
+
+        pvr_start_ta_rendering();
 
         // Flip buffers and mark them complete.
         o = irq_disable();
