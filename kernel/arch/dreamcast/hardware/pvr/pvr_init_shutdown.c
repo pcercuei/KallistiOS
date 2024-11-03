@@ -140,7 +140,7 @@ int pvr_init(pvr_init_params_t *params) {
     }
 
     /* Hook the PVR interrupt events on G2 */
-    pvr_state.vbl_handle = vblank_handler_add(pvr_int_handler, NULL);
+    pvr_state.vbl_handle = vblank_handler_add(pvr_vblank_handler, NULL);
     
     asic_evt_set_handler(ASIC_EVT_PVR_OPAQUEDONE, pvr_int_handler, NULL);
     asic_evt_enable(ASIC_EVT_PVR_OPAQUEDONE, ASIC_IRQ_DEFAULT);
