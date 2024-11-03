@@ -9,6 +9,7 @@
 #include <assert.h>
 #include <stdio.h>
 #include <string.h>
+#include <kos/genwait.h>
 #include <kos/string.h>
 #include <kos/thread.h>
 #include <dc/pvr.h>
@@ -86,10 +87,18 @@ void pvr_vertbuf_written(pvr_list_t list, uint32 amt) {
     pvr_state.dma_buffers[pvr_state.ram_target].ptr[list] = val;
 }
 
+static void pvr_start_ta_rendering(void) {
+    // Starting from that point, we consider that the Tile Accelerator
+    // might be busy.
+    pvr_state.ta_busy = 1;
+}
+
 /* Begin collecting data for a frame of 3D output to the off-screen
    frame buffer */
 void pvr_scene_begin(void) {
     int i;
+
+    pvr_start_ta_rendering();
 
     // Get general stuff ready.
     pvr_state.list_reg_open = -1;
@@ -357,11 +366,16 @@ int pvr_scene_finish(void) {
 }
 
 int pvr_wait_ready(void) {
-    int t;
+    int flags, t = 0;
 
     assert(pvr_state.valid);
 
-    t = sem_wait_timed((semaphore_t *)&pvr_state.ready_sem, 100);
+    flags = irq_disable();
+
+    if(pvr_state.ta_busy)
+        t = genwait_wait((void *)&pvr_state.ta_busy, "PVR wait ready", 100, NULL);
+
+    irq_restore(flags);
 
     if(t < 0) {
 #if 0
@@ -385,7 +399,7 @@ int pvr_wait_ready(void) {
 int pvr_check_ready(void) {
     assert(pvr_state.valid);
 
-    if(sem_count((semaphore_t *)&pvr_state.ready_sem) > 0)
+    if(!pvr_state.ta_busy)
         return 0;
     else
         return -1;
