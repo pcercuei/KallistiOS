@@ -11,6 +11,8 @@
 #include <arch/cache.h>
 #include "pvr_internal.h"
 
+#include <kos/genwait.h>
+
 #ifdef PVR_RENDER_DBG
 #include <stdio.h>
 #endif
@@ -90,7 +92,6 @@ void pvr_start_dma(void) {
     mutex_lock((mutex_t *)&pvr_state.dma_lock);
 
     // Begin DMAing the first list.
-    pvr_state.ta_busy = 1;
     dma_next_list(0);
 }
 
@@ -207,8 +208,9 @@ void pvr_int_handler(uint32 code, void *data) {
 
     // If all lists are fully transferred and a render is not in progress,
     // we are ready to start rendering.
-    if(!pvr_state.render_busy
-            && pvr_state.lists_transferred == pvr_state.lists_enabled) {
+    if(pvr_state.ta_busy
+       && !pvr_state.render_busy
+       && pvr_state.lists_transferred == pvr_state.lists_enabled) {
         /* XXX Note:
            For some reason, the render must be started _before_ we sync
            to the new reg buffers. The only reasons I can think of for this
@@ -226,15 +228,15 @@ void pvr_int_handler(uint32 code, void *data) {
         // Clear the texture render flag if we had it set.
         pvr_state.to_texture[bufn] = 0;
 
-        // Signal the client code to continue onwards.
-        sem_signal((semaphore_t *)&pvr_state.ready_sem);
-        thd_schedule(1, 0);
-
         // Switch to the clean TA buffer.
         pvr_state.lists_transferred = 0;
         pvr_sync_reg_buffer();
 
         // The TA is no longer busy.
         pvr_state.ta_busy = 0;
+
+        // Signal the client code to continue onwards.
+        genwait_wake_all((void *)&pvr_state.ta_busy);
+        thd_schedule(1, 0);
     }
 }
