@@ -46,7 +46,6 @@ static void dma_next_list(void *data) {
                mark it as complete, so we skip trying to DMA it. */
             if(!b->base[i]) {
                 pvr_state.lists_dmaed       |= 1 << i;
-                pvr_state.lists_transferred |= 1 << i;
                 continue;
             }
 
@@ -74,16 +73,14 @@ static void dma_next_list(void *data) {
     if(!did) {
         //DBG(("dma_complete(buf %d)\n", pvr_state.ram_target ^ 1));
 
+        // If that was the last one, then free up the DMA channel.
+        pvr_state.lists_dmaed = 0;
+
         // Unlock
         mutex_unlock((mutex_t *)&pvr_state.dma_lock);
-        pvr_state.lists_dmaed = 0;
 
         // Buffers are now empty again
         pvr_state.dma_buffers[pvr_state.ram_target ^ 1].ready = 0;
-
-        // Signal the client code to continue onwards.
-        sem_signal((semaphore_t *)&pvr_state.ready_sem);
-        thd_schedule(1, 0);
     }
 }
 
@@ -219,12 +216,9 @@ void pvr_int_handler(uint32 code, void *data) {
         // Clear the texture render flag if we had it set.
         pvr_state.to_texture[bufn] = 0;
 
-        // If we're not in DMA mode, then signal the client code
-        // to continue onwards.
-        if(!pvr_state.dma_mode) {
-            sem_signal((semaphore_t *)&pvr_state.ready_sem);
-            thd_schedule(1, 0);
-        }
+        // Signal the client code to continue onwards.
+        sem_signal((semaphore_t *)&pvr_state.ready_sem);
+        thd_schedule(1, 0);
 
         // Switch to the clean TA buffer.
         pvr_state.lists_transferred = 0;
