@@ -333,6 +333,8 @@ int pvr_scene_finish(void) {
         irq_restore(o);
 
         pvr_sync_stats(PVR_SYNC_BUFDONE);
+
+        pvr_start_dma();
     }
     else {
         /* If a list was open, close it */
