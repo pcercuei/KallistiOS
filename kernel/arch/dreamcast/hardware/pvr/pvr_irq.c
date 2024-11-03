@@ -96,10 +96,12 @@ void pvr_start_dma(void) {
 }
 
 static void pvr_render_lists(void) {
+    int bufn = pvr_state.view_target ^ 1;
+
     if(pvr_state.ta_busy
        && !pvr_state.render_busy
+       && (!pvr_state.render_completed || pvr_state.to_texture[bufn])
        && pvr_state.lists_transferred == pvr_state.lists_enabled) {
-        int bufn = pvr_state.view_target ^ 1;
 
         /* XXX Note:
            For some reason, the render must be started _before_ we sync
@@ -131,9 +133,38 @@ static void pvr_render_lists(void) {
     }
 }
 
-void pvr_int_handler(uint32 code, void *data) {
-    int bufn = pvr_state.view_target;
+void pvr_vblank_handler(uint32 code, void *data) {
+    (void)code;
+    (void)data;
 
+    pvr_sync_stats(PVR_SYNC_VBLANK);
+
+    // If the render-done interrupt has fired then we are ready to flip to the
+    // new frame buffer.
+    if(pvr_state.render_completed) {
+        int bufn = pvr_state.view_target;
+
+        //DBG(("view(%d)\n", pvr_state.view_target ^ 1));
+
+        // Handle PVR stats
+        pvr_sync_stats(PVR_SYNC_PAGEFLIP);
+
+        // Switch view address to the "good" buffer
+        pvr_state.view_target ^= 1;
+
+        if(!pvr_state.to_texture[bufn])
+            pvr_sync_view();
+
+        // Clear the render completed flag.
+        pvr_state.render_completed = 0;
+    }
+
+    // We may have a pending render, that couldn't be done as the previous
+    // render wasn't flipped yet; do it now.
+    pvr_render_lists();
+}
+
+void pvr_int_handler(uint32 code, void *data) {
     (void)data;
 
     // What kind of event did we get?
@@ -160,9 +191,6 @@ void pvr_int_handler(uint32 code, void *data) {
             pvr_state.render_busy = 0;
             pvr_state.render_completed = 1;
             pvr_sync_stats(PVR_SYNC_RNDDONE);
-            break;
-        case ASIC_EVT_PVR_VBLANK_BEGIN:
-            pvr_sync_stats(PVR_SYNC_VBLANK);
             break;
     }
 
@@ -203,43 +231,11 @@ void pvr_int_handler(uint32 code, void *data) {
         case ASIC_EVT_PVR_TRANSMODDONE:
         case ASIC_EVT_PVR_PTDONE:
 
-            if(pvr_state.lists_transferred == pvr_state.lists_enabled) {
-                pvr_sync_stats(PVR_SYNC_REGDONE);
-            }
+            if(pvr_state.lists_transferred != pvr_state.lists_enabled)
+                return;
 
-            return;
-    }
-
-    if(!pvr_state.to_texture[bufn]) {
-        // If it's not a vblank, ignore the rest of this for now.
-        if(code != ASIC_EVT_PVR_VBLANK_BEGIN)
-            return;
-    }
-    else {
-        // We don't need to wait for a vblank for rendering to a texture, but
-        // we really don't care about anything else unless we've actually gotten
-        // all the data submitted to the TA.
-        if(pvr_state.lists_transferred != pvr_state.lists_enabled &&
-           !pvr_state.render_completed)
-            return;
-    }
-
-    // If the render-done interrupt has fired then we are ready to flip to the
-    // new frame buffer.
-    if(pvr_state.render_completed) {
-        //DBG(("view(%d)\n", pvr_state.view_target ^ 1));
-
-        // Handle PVR stats
-        pvr_sync_stats(PVR_SYNC_PAGEFLIP);
-
-        // Switch view address to the "good" buffer
-        pvr_state.view_target ^= 1;
-
-        if(!pvr_state.to_texture[bufn])
-            pvr_sync_view();
-
-        // Clear the render completed flag.
-        pvr_state.render_completed = 0;
+            pvr_sync_stats(PVR_SYNC_REGDONE);
+            break;
     }
 
     // If all lists are fully transferred and a render is not in progress,
