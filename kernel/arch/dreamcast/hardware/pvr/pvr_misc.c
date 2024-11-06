@@ -105,7 +105,7 @@ void pvr_sync_stats(int event) {
                 pvr_state.reg_last_len = t - pvr_state.reg_start_time;
 
                 buf = pvr_state.ta_buffers + pvr_state.ta_target;
-                pvr_state.vtx_buf_used = PVR_GET(PVR_TA_VERTBUF_POS) - buf->vertex;
+                pvr_state.vtx_buf_used = pvr_state.vertbuf_pos[pvr_state.ta_target] - buf->vertex;
 
                 if(pvr_state.vtx_buf_used > pvr_state.vtx_buf_used_max)
                     pvr_state.vtx_buf_used_max = pvr_state.vtx_buf_used;
@@ -151,6 +151,7 @@ void pvr_sync_view(void) {
 void pvr_sync_reg_buffer(void) {
     volatile pvr_ta_buffers_t *buf;
 
+    pvr_state.vertbuf_pos[pvr_state.ta_target ^ 1] = PVR_GET(PVR_TA_VERTBUF_POS);
     buf = pvr_state.ta_buffers + pvr_state.ta_target;
 
     /* Reset TA */
@@ -190,17 +191,20 @@ void pvr_begin_queued_render(void) {
         float f;
         uint32 i;
     } zclip;
+    uint32_t vertbuf_pos;
 
     /* Get the appropriate buffer */
     tbuf = pvr_state.ta_buffers + (pvr_state.ta_target ^ 1);
     rbuf = pvr_state.frame_buffers + (bufn ^ 1);
+
+    vertbuf_pos = pvr_state.vertbuf_pos[pvr_state.ta_target ^ 1];
 
     /* Calculate background value for below */
     /* Small side note: during setup, the value is originally
        0x01203000... I'm thinking that the upper word signifies
        the length of the background plane list in dwords
        shifted up by 4. */
-    vert_end = 0x01000000 | ((PVR_GET(PVR_TA_VERTBUF_POS) - tbuf->vertex) << 1);
+    vert_end = 0x01000000 | ((vertbuf_pos - tbuf->vertex) << 1);
 
     /* Throw the background data on the end of the TA's list */
     bkg.flags1 = 0x90800000;    /* These are from libdream.. ought to figure out */
@@ -218,7 +222,7 @@ void pvr_begin_queued_render(void) {
     bkg.y3     = pvr_state.h;
     bkg.z3     = FLT_EPSILON;
     bkg.argb3  = pvr_state.bg_color;
-    vrl = (uint32_t *)(PVR_RAM_BASE | PVR_GET(PVR_TA_VERTBUF_POS));
+    vrl = (uint32_t *)(PVR_RAM_BASE | vertbuf_pos);
 
     memcpy4(vrl, &bkg, sizeof(bkg));
 

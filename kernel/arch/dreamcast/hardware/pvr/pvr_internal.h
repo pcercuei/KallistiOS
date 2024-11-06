@@ -179,6 +179,8 @@ typedef struct {
     pvr_frame_buffers_t frame_buffers[2];   // Frame buffers
     uint32              texture_base;       // Start of texture RAM
 
+    uint32  vertbuf_pos[2];
+
     // Screen size / clipping constants
     int     w, h;                       // Screen width, height
     int     tw, th;                     // Screen tile width, height
