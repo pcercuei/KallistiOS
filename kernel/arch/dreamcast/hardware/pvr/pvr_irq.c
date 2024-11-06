@@ -99,26 +99,10 @@ static void pvr_render_lists(void) {
     int bufn = pvr_state.view_target ^ 1;
 
     if(pvr_state.ta_busy
+       && !pvr_state.render_pending
        && !pvr_state.render_busy
-       && (!pvr_state.render_completed || pvr_state.to_texture[bufn])
        && pvr_state.lists_transferred == pvr_state.lists_enabled) {
-
-        /* XXX Note:
-           For some reason, the render must be started _before_ we sync
-           to the new reg buffers. The only reasons I can think of for this
-           are that there may be something in the reg sync that messes up
-           the render in progress, or we are misusing some bits somewhere. */
-
-        // Begin rendering from the dirty TA buffer into the clean
-        // frame buffer.
-        //DBG(("start_render(%d -> %d)\n", pvr_state.ta_target, pvr_state.view_target ^ 1));
         pvr_state.ta_target ^= 1;
-        pvr_begin_queued_render();
-        pvr_state.render_busy = 1;
-        pvr_sync_stats(PVR_SYNC_RNDSTART);
-
-        // Clear the texture render flag if we had it set.
-        pvr_state.to_texture[bufn] = 0;
 
         // Switch to the clean TA buffer.
         pvr_state.lists_transferred = 0;
@@ -130,6 +114,28 @@ static void pvr_render_lists(void) {
         // Signal the client code to continue onwards.
         genwait_wake_all((void *)&pvr_state.ta_busy);
         thd_schedule(1, 0);
+
+        pvr_state.render_pending = 1;
+    }
+
+    if (pvr_state.render_pending
+        && (!pvr_state.render_completed || pvr_state.to_texture[bufn])) {
+        /* XXX Note:
+           For some reason, the render must be started _before_ we sync
+           to the new reg buffers. The only reasons I can think of for this
+           are that there may be something in the reg sync that messes up
+           the render in progress, or we are misusing some bits somewhere. */
+
+        // Begin rendering from the dirty TA buffer into the clean
+        // frame buffer.
+        //DBG(("start_render(%d -> %d)\n", pvr_state.ta_target, pvr_state.view_target ^ 1));
+        pvr_begin_queued_render();
+        pvr_state.render_busy = 1;
+        pvr_state.render_pending = 0;
+        pvr_sync_stats(PVR_SYNC_RNDSTART);
+
+        // Clear the texture render flag if we had it set.
+        pvr_state.to_texture[bufn] = 0;
     }
 }
 

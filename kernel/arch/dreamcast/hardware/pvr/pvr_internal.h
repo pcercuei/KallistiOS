@@ -170,6 +170,7 @@ typedef struct {
     mutex_t dma_lock;                   // Locked if a DMA is in progress (vertex or texture)
     int     ta_ready;                   // >0 if the TA is ready for the new scene
     int     ta_busy;                    // >0 if a scene is ongoing and the TA hasn't signaled completion
+    int     render_pending;             // >0 if a render is pending
     int     render_busy;                // >0 if a render is in progress
     int     render_completed;           // >1 if a render has recently finished
 
