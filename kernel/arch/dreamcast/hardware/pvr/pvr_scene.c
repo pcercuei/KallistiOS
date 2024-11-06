@@ -321,12 +321,21 @@ int pvr_scene_finish(void) {
         b = pvr_state.dma_buffers + pvr_state.ram_target;
 
         for(i = 0; i < PVR_OPB_COUNT; i++) {
-            /* Check whether the current list type should be skipped:
-               A. We never enabled the list globally with pvr_init().
-               B. We never associated an in-RAM DMA vertex buffer with
-                  the given list type, because we're using hybrid
-                  rendering and submitted that list type directly. */
-            if(!(pvr_state.lists_enabled & (1 << i)) || !b->base[i])
+            /* We never enabled the list globally with pvr_init() - skip it */
+            if(!(pvr_state.lists_enabled & (1 << i)))
+                continue;
+
+            /* If any lists weren't used in this scene, submit blank ones now */
+            if(!(pvr_state.lists_closed & (1 << i))) {
+                pvr_list_begin(i);
+                pvr_blank_polyhdr(i);
+                pvr_list_finish();
+            }
+
+            /* We never associated an in-RAM DMA vertex buffer with the given
+               list type, because we're using hybrid rendering and submitted
+               that list type directly - skip it */
+            if(!b->base[i])
                 continue;
 
             // Make sure there's at least one primitive in each.
