@@ -1891,6 +1891,10 @@ void *pvr_vertbuf_tail(pvr_list_t list);
 */
 void pvr_vertbuf_written(pvr_list_t list, uint32_t amt);
 
+void *pvr_get_vert_ptr(pvr_list_t list);
+
+void pvr_put_vert_ptr(pvr_list_t list, void *ptr, size_t amt);
+
 /** \brief   Set the translucent polygon sort mode for the next frame.
     \ingroup pvr_scene_mgmt
 

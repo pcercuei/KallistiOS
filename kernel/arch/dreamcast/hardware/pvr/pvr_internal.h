@@ -291,4 +291,11 @@ void pvr_vblank_handler(uint32 code, void *data);
 
 void pvr_start_dma(void);
 
+/**** pvr_scene.c *****************************************************/
+
+static inline bool pvr_list_uses_dma(pvr_list_t list) {
+    return pvr_state.dma_mode &&
+           pvr_state.dma_buffers[pvr_state.ram_target].base[list];
+}
+
 #endif

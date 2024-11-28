@@ -154,11 +154,6 @@ void pvr_scene_begin_txr(pvr_ptr_t txr, uint32 *rx, uint32 *ry) {
 
 static bool pvr_list_dma;
 
-inline static bool pvr_list_uses_dma(pvr_list_t list) {
-    return pvr_state.dma_mode &&
-           pvr_state.dma_buffers[pvr_state.ram_target].base[list];
-}
-
 /* Begin collecting data for the given list type. Lists do not have to be
    submitted in any particular order, but all types of a list must be
    submitted at once. If the given list has already been closed, then an

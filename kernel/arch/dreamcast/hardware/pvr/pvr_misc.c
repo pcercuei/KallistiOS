@@ -293,3 +293,26 @@ pvr_ptr_t pvr_get_front_buffer(void)
        addressable from the 64-bit memory */
     return (pvr_ptr_t)(((addr << 1) & (PVR_RAM_SIZE - 1)) + PVR_RAM_BASE);
 }
+
+static pvr_dr_state_t pvr_dr_state;
+
+void *pvr_get_vert_ptr(pvr_list_t list) {
+    if(pvr_list_uses_dma(list)) {
+        return pvr_vertbuf_tail(list);
+    }
+
+    if((pvr_list_t)pvr_state.list_reg_open == list) {
+        return pvr_dr_target(pvr_dr_state);
+    }
+
+    assert_msg(0, "list not opened and DMA not available");
+    return NULL;
+}
+
+void pvr_put_vert_ptr(pvr_list_t list, void *ptr, size_t amt) {
+    if(pvr_list_uses_dma(list)) {
+        pvr_vertbuf_written(list, amt);
+    } else if((pvr_list_t)pvr_state.list_reg_open == list) {
+        pvr_dr_commit(ptr);
+    }
+}
