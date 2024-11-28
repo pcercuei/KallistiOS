@@ -218,9 +218,6 @@ typedef struct {
 
     // Output address for to-texture mode
     uint32  to_txr_addr[2];
-
-    // Whether direct rendering is active or not
-    uint32  dr_used;
 } pvr_state_t;
 
 /* There will be exactly one of these in KOS (in pvr_globals.c) */

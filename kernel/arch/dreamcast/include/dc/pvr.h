@@ -2011,7 +2011,10 @@ typedef uint32_t pvr_dr_state_t;
 
     \param  vtx_buf_ptr     A variable of type pvr_dr_state_t to init.
 */
-void pvr_dr_init(pvr_dr_state_t *vtx_buf_ptr);
+__depr("pvr_dr_init() is not useful anymore - no need to call it")
+static inline void pvr_dr_init(pvr_dr_state_t *vtx_buf_ptr) {
+    *vtx_buf_ptr = 0;
+}
 
 /** \brief   Obtain the target address for Direct Rendering.
 
@@ -2041,7 +2044,9 @@ void pvr_dr_init(pvr_dr_state_t *vtx_buf_ptr);
     Use it manually if you want to release Store Queues earlier.
 
 */
-void pvr_dr_finish(void);
+__depr("pvr_dr_finish() is not useful anymore - no need to call it")
+static inline void pvr_dr_finish(void) {
+}
 
 /** \brief  Upload a 32-byte payload to the Tile Accelerator
 
