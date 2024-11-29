@@ -31,6 +31,8 @@ int randnum(int limit) {
 /* Texture offsets */
 pvr_ptr_t txr_font = NULL;
 
+pvr_ptr_t fake_tex;
+
 /**********************************************************/
 /* Load and start an S3M file from disk or memory */
 #include "s3mplay.h"
@@ -789,6 +791,207 @@ void font_init(void) {
     pvr_poly_compile(&font_header, &tmp);
 }
 
+static uint16_t fake_tex_data[] = {
+    /* Alternating 0xffff / 0x7fff but pre-twiddled */
+    0xffff, 0xffff, 0x7fff, 0x7fff, 0xffff, 0xffff, 0x7fff, 0x7fff,
+    0xffff, 0xffff, 0x7fff, 0x7fff, 0xffff, 0xffff, 0x7fff, 0x7fff,
+    0xffff, 0xffff, 0x7fff, 0x7fff, 0xffff, 0xffff, 0x7fff, 0x7fff,
+    0xffff, 0xffff, 0x7fff, 0x7fff, 0xffff, 0xffff, 0x7fff, 0x7fff,
+    0xffff, 0xffff, 0x7fff, 0x7fff, 0xffff, 0xffff, 0x7fff, 0x7fff,
+    0xffff, 0xffff, 0x7fff, 0x7fff, 0xffff, 0xffff, 0x7fff, 0x7fff,
+    0xffff, 0xffff, 0x7fff, 0x7fff, 0xffff, 0xffff, 0x7fff, 0x7fff,
+    0xffff, 0xffff, 0x7fff, 0x7fff, 0xffff, 0xffff, 0x7fff, 0x7fff,
+};
+
+static void apply_alpha_mask(pvr_list_t list, float z) {
+    pvr_poly_cxt_t cxt;
+    pvr_vertex_t vert;
+    pvr_poly_hdr_t hdr;
+
+    pvr_poly_cxt_txr(&cxt, list,
+                     PVR_TXRFMT_ARGB1555, 8, 8, fake_tex, PVR_FILTER_NONE);
+
+    cxt.txr.env = PVR_TXRENV_REPLACE;
+    cxt.txr.alpha = PVR_TXRALPHA_ENABLE;
+    cxt.blend.src = PVR_BLEND_DESTCOLOR;
+    cxt.blend.dst = PVR_BLEND_ZERO;
+
+    pvr_poly_compile(&hdr, &cxt);
+    pvr_prim(&hdr, sizeof(hdr));
+
+    vert.flags = PVR_CMD_VERTEX;
+    vert.x = 0.0f;
+    vert.y = 0.0f;
+    vert.u = 0.0f;
+    vert.v = 0.0f;
+    vert.z = z;
+    pvr_prim(&vert, sizeof(vert));
+
+    vert.x = 640.0f;
+    vert.y = 0.0f;
+    vert.u = 640.0f / 8.0f;
+    vert.v = 0.0f;
+    pvr_prim(&vert, sizeof(vert));
+
+    vert.x = 0.0f;
+    vert.y = 480.0f;
+    vert.u = 0.0f;
+    vert.v = 480.0f / 8.0f;
+    pvr_prim(&vert, sizeof(vert));
+
+    vert.flags = PVR_CMD_VERTEX_EOL;
+    vert.x = 640.0f;
+    vert.y = 480.0f;
+    vert.u = 640.0f / 8.0f;
+    vert.v = 480.0f / 8.0f;
+    pvr_prim(&vert, sizeof(vert));
+}
+
+static void render_frontbuf_step1(pvr_poly_cxt_t *cxt, float z, uint32_t argb) {
+    pvr_poly_hdr_t hdr;
+    pvr_vertex_t vert;
+
+    cxt->blend.src = PVR_BLEND_DESTALPHA;
+    cxt->blend.dst = PVR_BLEND_ONE;
+    cxt->txr.env = PVR_TXRENV_MODULATE;
+
+    pvr_poly_compile(&hdr, cxt);
+    pvr_prim(&hdr, sizeof(hdr));
+
+    vert.flags = PVR_CMD_VERTEX;
+    vert.x = 0.0f;
+    vert.y = 0.0f;
+    vert.u = 0.0f;
+    vert.v = 0.0f;
+    vert.z = z;
+    vert.argb = argb;
+    pvr_prim(&vert, sizeof(vert));
+
+    vert.x = 320.0f;
+    vert.y = 0.0f;
+    vert.u = 640.0f / 1024.0f;
+    vert.v = 0.0f;
+    pvr_prim(&vert, sizeof(vert));
+
+    vert.x = 0.0f;
+    vert.y = 480.0f;
+    vert.u = 0.0f;
+    vert.v = 960.0f / 1024.0f;
+    pvr_prim(&vert, sizeof(vert));
+
+    vert.flags = PVR_CMD_VERTEX_EOL;
+    vert.x = 320.0f;
+    vert.y = 480.0f;
+    vert.u = 640.0f / 1024.0f;
+    vert.v = 960.0f / 1024.0f;
+    pvr_prim(&vert, sizeof(vert));
+
+    vert.flags = PVR_CMD_VERTEX;
+    vert.x = 320.0f;
+    vert.y = 0.0f;
+    vert.u = 0.0f;
+    vert.v = 1.0f / 1024.0f;
+    pvr_prim(&vert, sizeof(vert));
+
+    vert.x = 640.0f;
+    vert.y = 0.0f;
+    vert.u = 640.0f / 1024.0f;
+    vert.v = 0.0f;
+    pvr_prim(&vert, sizeof(vert));
+
+    vert.x = 320.0f;
+    vert.y = 480.0f;
+    vert.u = 0.0f;
+    vert.v = 961.0f / 1024.0f;
+    pvr_prim(&vert, sizeof(vert));
+
+    vert.flags = PVR_CMD_VERTEX_EOL;
+    vert.x = 640.0f;
+    vert.y = 480.0f;
+    vert.u = 640.0f / 1024.0f;
+    vert.v = 961.0f / 1024.0f;
+    pvr_prim(&vert, sizeof(vert));
+}
+
+static void render_frontbuf_step2(pvr_poly_cxt_t *cxt, float z, uint32_t argb) {
+    pvr_poly_hdr_t hdr;
+    pvr_vertex_t vert;
+
+    cxt->blend.src = PVR_BLEND_INVDESTALPHA;
+    cxt->blend.dst = PVR_BLEND_ONE;
+    cxt->txr.env = PVR_TXRENV_MODULATE;
+
+    pvr_poly_compile(&hdr, cxt);
+    pvr_prim(&hdr, sizeof(hdr));
+
+    vert.flags = PVR_CMD_VERTEX;
+    vert.x = 0.0f;
+    vert.y = 0.0f;
+    vert.u = -1.0f / 1024.0f;
+    vert.v = 0.0f;
+    vert.z = z;
+    vert.argb = argb;
+    pvr_prim(&vert, sizeof(vert));
+
+    vert.x = 320.0f;
+    vert.y = 0.0f;
+    vert.u = 639.0f / 1024.0f;
+    vert.v = 0.0f;
+    pvr_prim(&vert, sizeof(vert));
+
+    vert.x = 0.0f;
+    vert.y = 480.0f;
+    vert.u = -1.0f / 1024.0f;
+    vert.v = 960.0f / 1024.0f;
+    pvr_prim(&vert, sizeof(vert));
+
+    vert.flags = PVR_CMD_VERTEX_EOL;
+    vert.x = 320.0f;
+    vert.y = 480.0f;
+    vert.u = 639.0f / 1024.0f;
+    vert.v = 960.0f / 1024.0f;
+    pvr_prim(&vert, sizeof(vert));
+
+    vert.flags = PVR_CMD_VERTEX;
+    vert.x = 320.0f;
+    vert.y = 0.0f;
+    vert.u = -1.0f / 1024.0f;
+    vert.v = 1.0f / 1024.0f;
+    pvr_prim(&vert, sizeof(vert));
+
+    vert.x = 640.0f;
+    vert.y = 0.0f;
+    vert.u = 639.0f / 1024.0f;
+    vert.v = 0.0f;
+    pvr_prim(&vert, sizeof(vert));
+
+    vert.x = 320.0f;
+    vert.y = 480.0f;
+    vert.u = -1.0f / 1024.0f;
+    vert.v = 961.0f / 1024.0f;
+    pvr_prim(&vert, sizeof(vert));
+
+    vert.flags = PVR_CMD_VERTEX_EOL;
+    vert.x = 640.0f;
+    vert.y = 480.0f;
+    vert.u = 639.0f / 1024.0f;
+    vert.v = 961.0f / 1024.0f;
+    pvr_prim(&vert, sizeof(vert));
+}
+
+static void draw_front_buffer(pvr_list_t list, float z, uint32_t argb) {
+    pvr_poly_cxt_t cxt;
+
+    apply_alpha_mask(list, z);
+
+    pvr_poly_cxt_txr(&cxt, list,
+                     PVR_TXRFMT_RGB565 | PVR_TXRFMT_NONTWIDDLED | PVR_TXRFMT_X32_STRIDE,
+                     1024, 1024, pvr_get_front_buffer(), PVR_FILTER_NONE);
+
+    render_frontbuf_step1(&cxt, z + 1.0f, argb);
+    render_frontbuf_step2(&cxt, z + 2.0f, argb);
+}
+
 /********************************************************************/
 
 int framecnt = 0;
@@ -807,6 +1010,8 @@ void draw_one_frame(void) {
 
     /* Draw cubes */
     cubes_one_frame();
+
+    draw_front_buffer(PVR_LIST_TR_POLY, 200.0f, 0xffa0a0a0);
 
     /* Draw scrolly */
     font_one_frame();
@@ -838,6 +1043,8 @@ int main() {
     printf("Initializing new PVR system\n");
     pvr_init(&params);
 
+    pvr_txr_set_stride(640);
+
     printf("Initializing stars\n");
     stars_init();
     printf("Init font\n");
@@ -847,6 +1054,10 @@ int main() {
     play_s3m("/rd/e-79014.s3m");
 
     printf("Starting display\n");
+
+    fake_tex = pvr_mem_malloc(sizeof(fake_tex_data));
+
+    pvr_txr_load(fake_tex_data, fake_tex, sizeof(fake_tex_data));
 
     while(1) {
         if((cont = maple_enum_type(0, MAPLE_FUNC_CONTROLLER)) != NULL) {
