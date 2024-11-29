@@ -2437,6 +2437,8 @@ void pvr_txr_load_kimg(const kos_img_t *img, pvr_ptr_t dst, uint32_t flags);
 */
 pvr_ptr_t pvr_get_front_buffer(void);
 
+void pvr_load_front_buffer(pvr_list_t list_type, uint32_t argb);
+
 /* PVR DMA ***********************************************************/
 /** \defgroup pvr_dma   DMA
     \brief              PowerVR DMA driver

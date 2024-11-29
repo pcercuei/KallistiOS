@@ -316,3 +316,91 @@ void pvr_put_vert_ptr(pvr_list_t list, void *ptr, size_t amt) {
         pvr_dr_commit(ptr);
     }
 }
+
+static uint32_t next_pow2(uint32_t x) {
+    return BIT(32 - __builtin_clz(x));
+}
+
+void pvr_load_front_buffer(pvr_list_t list_type, uint32_t argb) {
+    pvr_poly_cxt_t cxt;
+    pvr_poly_hdr_t *hdr;
+    pvr_vertex_t *v;
+    unsigned int i, step, x;
+    unsigned int width = vid_mode->width, width_pow2 = next_pow2(width);
+    unsigned int height = vid_mode->height, height_pow2 = next_pow2(height);
+    float inv_width_pow2 = 1.0f / (float)width_pow2;
+    float maxv = (float)height / (float)height_pow2;
+    float tx, delta2 = inv_width_pow2 * 2.0f;
+
+    uint32_t addr32b = (uint32_t)pvr_get_front_buffer();
+
+    /* If the address point above half of the VRAM size, we're in the second bank */
+    bool is_bank1 = addr32b & (PVR_RAM_SIZE >> 1);
+
+    /* Compute the 64-bit address from the 32-bit address */
+    uint32_t addr64b = (addr32b & ((PVR_RAM_SIZE >> 1) - 1)) * 2;
+
+    for(step = 0; step < 2; step++) {
+        pvr_poly_cxt_txr(&cxt, list_type,
+                         PVR_TXRFMT_RGB565 | PVR_TXRFMT_NONTWIDDLED | PVR_TXRFMT_X32_STRIDE,
+                         width_pow2, height_pow2,
+                         (pvr_ptr_t)(addr64b + step * width * 2),
+                         PVR_FILTER_NEAREST);
+
+        cxt.depth.comparison = PVR_DEPTHCMP_ALWAYS;
+        cxt.depth.write = PVR_DEPTHWRITE_DISABLE;
+
+        hdr = pvr_get_vert_ptr(list_type);
+        pvr_poly_compile(hdr, &cxt);
+        pvr_put_vert_ptr(list_type, hdr, sizeof(*hdr));
+
+        for(i = 0, x = step * width / 2; x < (step + 1) * width / 2; i += 2, x += 2) {
+            tx = (float)((i + is_bank1) * 2) * inv_width_pow2;
+
+            v = pvr_get_vert_ptr(list_type);
+
+            v->flags = PVR_CMD_VERTEX;
+            v->x = x;
+            v->y = 0.0f;
+            v->z = 1000000.0f;
+            v->u = tx;
+            v->v = 0.0f;
+            v->argb = argb;
+
+            pvr_put_vert_ptr(list_type, v, sizeof(*v));
+            v = pvr_get_vert_ptr(list_type);
+
+            v->flags = PVR_CMD_VERTEX;
+            v->x = x + 2;
+            v->y = 0.0f;
+            v->z = 1000000.0f;
+            v->u = tx + delta2;
+            v->v = 0.0f;
+            v->argb = argb;
+
+            pvr_put_vert_ptr(list_type, v, sizeof(*v));
+            v = pvr_get_vert_ptr(list_type);
+
+            v->flags = PVR_CMD_VERTEX;
+            v->x = x;
+            v->y = height;
+            v->z = 1000000.0f;
+            v->u = tx;
+            v->v = maxv;
+            v->argb = argb;
+
+            pvr_put_vert_ptr(list_type, v, sizeof(*v));
+            v = pvr_get_vert_ptr(list_type);
+
+            v->flags = PVR_CMD_VERTEX_EOL;
+            v->x = x + 2;
+            v->y = height;
+            v->z = 1000000.0f;
+            v->u = tx + delta2;
+            v->v = maxv;
+            v->argb = argb;
+
+            pvr_put_vert_ptr(list_type, v, sizeof(*v));
+        }
+    }
+}
