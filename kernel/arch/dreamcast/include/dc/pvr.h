@@ -2413,6 +2413,20 @@ void pvr_txr_load_ex(const void *src, pvr_ptr_t dst,
 */
 void pvr_txr_load_kimg(const kos_img_t *img, pvr_ptr_t dst, uint32_t flags);
 
+/** \brief   Get a pointer to the front buffer.
+    \ingroup pvr_txr_mgmt
+
+    This function can be used to retrieve a pointer to the front buffer, aka.
+    the last fully rendered buffer that is either being displayed right now,
+    or is queued to be displayed.
+
+    Note that the frame buffers lie in 32-bit memory, while textures lie in
+    64-bit memory. The address returned will point to 64-bit memory, but the
+    front buffer cannot be used directly as a regular texture.
+
+    \return                 A pointer to the front buffer.
+*/
+pvr_ptr_t pvr_get_front_buffer(void);
 
 /* PVR DMA ***********************************************************/
 /** \defgroup pvr_dma   DMA

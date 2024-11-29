@@ -269,3 +269,27 @@ void pvr_blank_polyhdr_buf(int type, pvr_poly_hdr_t * poly) {
     poly->d1 = poly->d2 = poly->d3 = poly->d4 = 0xffffffff;
 
 }
+
+pvr_ptr_t pvr_get_front_buffer(void)
+{
+    unsigned int idx;
+    uint32_t addr;
+
+    /* As we are painting the back buffer, the front buffer is the frame that
+       was previously submitted for rendering. It may not have been done
+       rendering, so make sure that we wait for the PVR to be done with it. */
+    pvr_wait_render_done();
+
+    irq_disable_scoped();
+
+    /* The front buffer has been rendered, but may not have been submitted to
+       the video hardware yet. In case this has yet to happen, we want the
+       second view target, aka. the one not currently being displayed. */
+    idx = pvr_state.view_target ^ pvr_state.render_completed;
+
+    addr = pvr_state.frame_buffers[idx].frame;
+
+    /* The front buffer is in 32-bit memory, convert its address to make it
+       addressable from the 64-bit memory */
+    return (pvr_ptr_t)(((addr << 1) & (PVR_RAM_SIZE - 1)) + PVR_RAM_BASE);
+}
