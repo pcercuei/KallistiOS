@@ -19,6 +19,7 @@
 #include <arch/irq.h>
 #include <arch/cache.h>
 #include <arch/memory.h>
+#include <kos/genwait.h>
 #include <kos/net.h>
 #include <kos/thread.h>
 #include <kos/sem.h>
@@ -626,12 +627,15 @@ static int bba_tx(const uint8 * pkt, int len, int wait)
 #endif
 {
     if(!link_stable) {
-        if(wait == BBA_TX_WAIT) {
-            while(!link_stable)
-                ;
-        }
-        else
+        if(wait != BBA_TX_WAIT)
             return BBA_TX_AGAIN;
+
+        irq_disable_scoped();
+
+        if(!link_stable
+           && genwait_wait((void *)&link_stable, "BBA link stable", 1000, NULL) < 0) {
+            return BBA_TX_ERROR;
+        }
     }
 
     /* Wait till it's clear to transmit */
@@ -640,6 +644,8 @@ static int bba_tx(const uint8 * pkt, int len, int wait)
             if(g2_read_32(NIC(RT_TXSTATUS0 + 4 * rtl.cur_tx)) & RT_TX_ABORTED)
                 g2_write_32(NIC(RT_TXSTATUS0 + 4 * rtl.cur_tx),
                             g2_read_32(NIC(RT_TXSTATUS0 + 4 * rtl.cur_tx)) | 1);
+            else if (!irq_inside_int())
+                thd_sleep(10);
         }
     }
     else {
@@ -789,6 +795,7 @@ static void bba_link_change(void) {
 
         // The link is back.
         link_stable = 1;
+        genwait_wake_all((void *)&link_stable);
     }
     else {
         dbglog(DBG_INFO, "bba: link lost\n");
@@ -918,8 +925,6 @@ static int bba_if_shutdown(netif_t *self) {
 }
 
 static int bba_if_start(netif_t *self) {
-    int i;
-
     (void)self;
 
     if(!(bba_if.flags & NETIF_INITIALIZED))
@@ -939,17 +944,15 @@ static int bba_if_start(netif_t *self) {
     /* We need something like this to get DHCP to work (since it doesn't
        know anything about an activated and yet not-yet-receiving network
        adapter =) */
-    /* Spin until the link is stabilized */
-    i = 1000;
+    /* Wait until the link is stabilized */
 
-    while(!link_stable && i > 0) {
-        i--;
-        thd_sleep(10);
-    }
+    irq_disable_scoped();
 
     if(!link_stable) {
-        dbglog(DBG_ERROR, "bba: timed out waiting for link to stabilize\n");
-        return -1;
+        if(genwait_wait((void *)&link_stable, "BBA link stable", 10000, NULL) < 0) {
+            dbglog(DBG_ERROR, "bba: timed out waiting for link to stabilize\n");
+            return -1;
+        }
     }
 
     bba_if.flags |= NETIF_RUNNING;
