@@ -115,11 +115,12 @@ int vmu_pkg_build(vmu_pkg_t *src, uint8_t ** dst, int * dst_size);
     files read in.
 
     \param  data            The buffer to parse.
+    \param  data_size       The size of the buffer, in bytes.
     \param  pkg             Where to store the vmu_pkg_t.
     \retval -1              On invalid CRC in the data.
     \retval 0               On success.
 */
-int vmu_pkg_parse(uint8_t *data, vmu_pkg_t *pkg);
+int vmu_pkg_parse(uint8_t *data, size_t data_size, vmu_pkg_t *pkg);
 
 /** \brief   Load a .ico file to use as a VMU file's icon.
     \ingroup vmu_package
