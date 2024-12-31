@@ -53,7 +53,7 @@ typedef struct vmu_pkg {
     int             data_len;           /**< \brief Number of data (payload) bytes */
     uint16_t        icon_pal[16];       /**< \brief Icon palette (ARGB4444) */
     uint8_t         *icon_data;         /**< \brief 512*n bytes of icon data */
-    const uint8_t   *eyecatch_data;     /**< \brief Eyecatch data */
+    uint8_t         *eyecatch_data;     /**< \brief Eyecatch data */
     const uint8_t   *data;              /**< \brief Payload data */
 } vmu_pkg_t;
 
