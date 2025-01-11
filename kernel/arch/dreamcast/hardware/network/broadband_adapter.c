@@ -427,9 +427,7 @@ static void g2_read_block_8_fast(uint8 *dst, uint8 *src, int len) {
     if(len <= 0)
         return;
 
-    g2_ctx_t ctx;
-
-    ctx = g2_lock();
+    g2_lock_scoped();
 
     uint32 * d = (uint32 *) dst;
     uint32 * s = (uint32 *) src;
@@ -457,8 +455,6 @@ static void g2_read_block_8_fast(uint8 *dst, uint8 *src, int len) {
         }
         while(--len);
     }
-
-    g2_unlock(ctx);
 }
 
 

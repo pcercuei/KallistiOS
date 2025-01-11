@@ -48,7 +48,6 @@ void spu_memload(uintptr_t dst, void *src_void, size_t length) {
     dst |= SPU_RAM_UNCACHED_BASE;
 
     while(length >= 8) {
-        g2_fifo_wait();
         g2_write_block_32((uint32_t *)src, dst, 8);
 
         src += 8 * 4;
@@ -56,16 +55,13 @@ void spu_memload(uintptr_t dst, void *src_void, size_t length) {
         length -= 8;
     }
 
-    if(length > 0) {
-        g2_fifo_wait();
+    if(length > 0)
         g2_write_block_32((uint32_t *)src, dst, length);
-    }
 }
 
 void spu_memload_sq(uintptr_t dst, void *src_void, size_t length) {
     uint8_t *src = (uint8_t *)src_void;
     size_t aligned_len;
-    g2_ctx_t ctx;
 
     if(length < 32) {
         spu_memload(dst, src_void, length);
@@ -87,12 +83,12 @@ void spu_memload_sq(uintptr_t dst, void *src_void, size_t length) {
     /* Lock the SQs before disabling the interrupts. */
     sq_lock(NULL);
 
-    /* Make sure the FIFOs are empty */
-    g2_fifo_wait();
-
     /* Lock G2 bus because we can't suspend SQs from
      * another thread with PIO access to G2 bus. */
-    ctx = g2_lock();
+    g2_lock();
+
+    /* Make sure the FIFOs are empty */
+    g2_fifo_wait();
 
     sq_cpy((void *)dst, src, aligned_len);
 
@@ -101,14 +97,13 @@ void spu_memload_sq(uintptr_t dst, void *src_void, size_t length) {
     sq_unlock();
     sq_wait();
 
-    g2_unlock(ctx);
+    g2_unlock();
 
     if(length > 0) {
         /* Make sure the destination is in a non-cached area */
         dst |= MEM_AREA_P2_BASE;
         dst += aligned_len;
         src += aligned_len;
-        g2_fifo_wait();
         g2_write_block_32((uint32_t *)src, dst, length >> 2);
     }
 }
@@ -151,7 +146,6 @@ void spu_memload_dma(uintptr_t dst, void *src_void, size_t length) {
         dst |= (MEM_AREA_P2_BASE | SPU_RAM_BASE);
         dst += aligned_len;
         src += aligned_len;
-        g2_fifo_wait();
         g2_write_block_32((uint32_t *)src, dst, length >> 2);
     }
 }
@@ -167,7 +161,6 @@ void spu_memread(void *dst_void, uintptr_t src, size_t length) {
     src |= SPU_RAM_UNCACHED_BASE;
 
     while(length >= 8) {
-        g2_fifo_wait();
         g2_read_block_32((uint32_t *)dst, src, 8);
 
         src += 8 * 4;
@@ -175,10 +168,8 @@ void spu_memread(void *dst_void, uintptr_t src, size_t length) {
         length -= 8;
     }
 
-    if(length > 0) {
-        g2_fifo_wait();
+    if(length > 0)
         g2_read_block_32((uint32_t *)dst, src, length);
-    }
 }
 
 void spu_memset(uintptr_t dst, uint32_t what, size_t length) {
@@ -197,22 +188,18 @@ void spu_memset(uintptr_t dst, uint32_t what, size_t length) {
     dst |= SPU_RAM_UNCACHED_BASE;
 
     while(length >= 8) {
-        g2_fifo_wait();
         g2_write_block_32(blank, dst, 8);
 
         dst += 8 * 4;
         length -= 8;
     }
 
-    if(length > 0) {
-        g2_fifo_wait();
+    if(length > 0)
         g2_write_block_32(blank, dst, length);
-    }
 }
 
 void spu_memset_sq(uintptr_t dst, uint32_t what, size_t length) {
     int aligned_len;
-    g2_ctx_t ctx;
 
     /* Round up to the nearest multiple of 4 */
     if(length & 3) {
@@ -229,12 +216,12 @@ void spu_memset_sq(uintptr_t dst, uint32_t what, size_t length) {
     /* Lock the SQs before disabling the interrupts. */
     sq_lock(NULL);
 
-    /* Make sure the FIFOs are empty */
-    g2_fifo_wait();
-
     /* Lock G2 bus because we can't suspend SQs from
      * another thread with PIO access to G2 bus. */
-    ctx = g2_lock();
+    g2_lock();
+
+    /* Make sure the FIFOs are empty */
+    g2_fifo_wait();
 
     sq_set32((void *)dst, what, aligned_len);
 
@@ -243,7 +230,7 @@ void spu_memset_sq(uintptr_t dst, uint32_t what, size_t length) {
     sq_unlock();
     sq_wait();
 
-    g2_unlock(ctx);
+    g2_unlock();
 
     if(length > 0) {
         /* Make sure the destination is in a non-cached area */
@@ -255,10 +242,9 @@ void spu_memset_sq(uintptr_t dst, uint32_t what, size_t length) {
 /* Reset the AICA channel registers */
 void spu_reset_chans(void) {
     int i;
-    g2_ctx_t ctx;
 
-    g2_fifo_wait();
-    ctx = g2_lock();
+    g2_lock_scoped();
+
     g2_write_32_raw(SNDREGADDR(0x2800), 0);
 
     for(i = 0; i < 64; i++) {
@@ -270,7 +256,6 @@ void spu_reset_chans(void) {
 
     g2_fifo_wait();
     g2_write_32_raw(SNDREGADDR(0x2800), 0x000f);
-    g2_unlock(ctx);
 }
 
 /* Enable/disable the SPU; note that disable implies reset of the
@@ -299,7 +284,6 @@ void spu_cdda_volume(int left_volume, int right_volume) {
     if(right_volume > 15)
         right_volume = 15;
 
-    g2_fifo_wait();
     g2_write_32(SNDREGADDR(0x2040),
                 (g2_read_32(SNDREGADDR(0x2040)) & ~0xff00) | (left_volume << 8));
     g2_write_32(SNDREGADDR(0x2044),
@@ -317,7 +301,6 @@ void spu_cdda_pan(int left_pan, int right_pan) {
 
     right_pan &= 0x1f;
 
-    g2_fifo_wait();
     g2_write_32(SNDREGADDR(0x2040),
                 (g2_read_32(SNDREGADDR(0x2040)) & ~0xff) | (left_pan << 0));
     g2_write_32(SNDREGADDR(0x2044),
@@ -332,7 +315,6 @@ static void spu_cdda_init(void) {
 
 /* Set master volume (0..15) and mono/stereo settings */
 void spu_master_mixer(int volume, int stereo) {
-    g2_fifo_wait();
     g2_write_32(SNDREGADDR(0x2800), volume | (stereo ? 0 : 0x8000));
 }
 
@@ -347,7 +329,6 @@ int spu_init(void) {
 
     /* Load a default "program" into the SPU that just executes
        an infinite loop, so that CD audio works. */
-    g2_fifo_wait();
     g2_write_32(SPU_RAM_UNCACHED_BASE, 0xeafffff8);
 
     /* Start the SPU again */
