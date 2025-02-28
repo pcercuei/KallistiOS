@@ -20,6 +20,10 @@
 
 #include "arm/aica_cmd_iface.h"
 
+/* Channels status register bits */
+#define AICA_CHANNEL_KEYONEX   0x8000
+#define AICA_CHANNEL_KEYONB    0x4000
+
 /* Are we initted? */
 static int initted = 0;
 
