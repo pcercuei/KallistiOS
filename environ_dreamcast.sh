@@ -47,6 +47,6 @@ if [ x${KOS_ARCH} = xdreamcast ]; then
 	export DC_ARM_MAKE="make"
 	export DC_ARM_START="${KOS_ARCH_DIR}/sound/arm/crt0.s"
 	export DC_ARM_LDFLAGS="-Wl,-Ttext=0x00000000,-N -nostartfiles -e reset"
-	export DC_ARM_LIB_PATHS=""
-	export DC_ARM_LIBS="-Wl,--start-group -lgcc -Wl,--end-group"
+	export DC_ARM_LIB_PATHS="-L ${KOS_BASE}/kernel/arch/dreamcast/sound/arm/aicaos"
+	export DC_ARM_LIBS="-Wl,--start-group -laicaos -lgcc -Wl,--end-group"
 fi
