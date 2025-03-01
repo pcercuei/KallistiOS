@@ -20,6 +20,7 @@
 #include <kos/mutex.h>
 #include <arch/cache.h>
 #include <arch/timer.h>
+#include <dc/aram.h>
 #include <dc/g2bus.h>
 #include <dc/sq.h>
 #include <dc/spu.h>
