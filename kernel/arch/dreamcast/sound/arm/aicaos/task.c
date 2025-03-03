@@ -111,6 +111,8 @@ __noreturn void __task_reschedule(bool skip_me)
     ticks = counter - last_pos;
     last_pos = counter;
 
+    current_task->cpu_time += ticks;
+
     /* Wake up sleeping tasks, and program next wakeup */
     task_wakeup(ticks);
     task_program_next_wakeup();
@@ -178,6 +180,7 @@ void task_init(struct task *task, const char *name, void *func,
     task->awaken = 0;
     task->prio = prio;
     task->real_prio = prio;
+    task->cpu_time = 0;
 
     irq_disable_scoped();
 
@@ -286,4 +289,16 @@ void task_unboost(void)
 
     if (current_task->prio != current_task->real_prio)
         task_set_prio(current_task, current_task->real_prio);
+}
+
+ticks_t task_get_cputime(void)
+{
+    uint16_t counter, ticks;
+
+    irq_disable_scoped();
+
+    counter = aica_read_counter();
+    ticks = counter - last_pos;
+
+    return current_task->cpu_time + ticks;
 }

@@ -58,6 +58,7 @@ struct task {
     enum task_state state;
     const char *name;
     enum task_prio prio, real_prio;
+    unsigned int cpu_time;
 };
 
 /* Pointer to the current task */
@@ -111,6 +112,9 @@ static inline unsigned int ticks_to_ms(ticks_t ticks)
 {
     return ticks * 10 / 441;
 }
+
+/* Get the time spent (in ticks) executing the current task. */
+ticks_t task_get_cputime(void);
 
 /* Reschedule without saving the current task. */
 __noreturn void __task_reschedule(bool skip_me);
