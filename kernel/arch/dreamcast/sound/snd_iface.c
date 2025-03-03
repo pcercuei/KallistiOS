@@ -7,19 +7,25 @@
    SH-4 support routines for accessing the AICA via the standard KOS driver
 */
 
+#include <stdalign.h>
 #include <string.h>
 #include <stdlib.h>
 #include <assert.h>
 #include <stdio.h>
 
 #include <kos/dbglog.h>
+#include <kos/errno.h>
 #include <kos/thread.h>
 #include <kos/mutex.h>
 #include <kos/timer.h>
 #include <dc/aram.h>
+#include <dc/asic.h>
 #include <dc/g2bus.h>
 #include <dc/spu.h>
 #include <dc/sound/sound.h>
+#include <dc/sound/queue.h>
+#include <aica/queue.h>
+#include <aica/registers.h>
 
 #include "arm/aica_cmd_iface.h"
 
@@ -33,6 +39,112 @@ static int initted = 0;
    There are some cases like stereo stream control + stereo sfx control
    at the same time in separate threads. */
 static mutex_t queue_proc_mutex = MUTEX_INITIALIZER;
+
+static void aica_rpc_read(void *dst, const void *rpc_src, size_t len) {
+    aram_read(dst, (aram_addr_t)rpc_src, len);
+}
+
+static void aica_rpc_write(void *rpc_dst, const void *src, size_t len) {
+    aram_write((aram_addr_t)rpc_dst, src, len);
+}
+
+static void aica_rpc_notify(void) {
+    g2_write_32(REG_SPU_INT_SEND, SPU_INT_ENABLE_SH4);
+}
+
+rpc_t aica_rpc = {
+    .rpc_read = aica_rpc_read,
+    .rpc_write = aica_rpc_write,
+    .rpc_notify = aica_rpc_notify,
+};
+
+static int process_puts(const rpc_cmd_t *cmd, void *d) {
+    alignas(4) char buf[1024];
+    (void)d;
+
+    puts(aram_read_string(cmd->params[0], buf, sizeof(buf)));
+
+    return 0;
+}
+
+static int process_openfile(const rpc_cmd_t *cmd, void *d) {
+    alignas(4) char buf[1024];
+    char *fn;
+
+    (void)d;
+    fn = aram_read_string((aram_addr_t)cmd->params[0], buf, sizeof(buf));
+
+    return fs_open(fn, cmd->params[1]);
+}
+
+static int process_writefile(const rpc_cmd_t *cmd, void *d) {
+    alignas(4) char buf[1024];
+    int fd = cmd->params[0];
+    aram_addr_t src = cmd->params[1];
+    size_t cnt = cmd->params[2];
+
+    (void)d;
+    aram_read(buf, src & ~0x3, cnt + (src & 0x3));
+
+    return (int)fs_write(fd, &buf[src & 0x3], cnt);
+}
+
+static int process_readfile(const rpc_cmd_t *cmd, void *d) {
+    alignas(4) char buf[1024];
+    int fd = cmd->params[0];
+    aram_addr_t dst = cmd->params[1];
+    size_t cnt = cmd->params[2];
+    ssize_t ret;
+
+    (void)d;
+    assert_msg(!(dst & 0x3), "Dest ARAM address must be 4-byte aligned");
+
+    if(cnt > sizeof(buf))
+        cnt = sizeof(buf);
+
+    ret = fs_read(fd, buf, cnt);
+    if(ret > 0)
+        aram_write(dst, buf, ret);
+
+    return (int)ret;
+}
+
+static int process_closefile(const rpc_cmd_t *cmd, void *d) {
+    (void)d;
+    return fs_close(cmd->params[0]);
+}
+
+static int process_seekfile(const rpc_cmd_t *cmd, void *d) {
+    (void)d;
+    return fs_seek(cmd->params[0], cmd->params[1], cmd->params[2]);
+}
+
+static int process_tellfile(const rpc_cmd_t *cmd, void *d) {
+    (void)d;
+    return fs_tell(cmd->params[0]);
+}
+
+static int process_totalfile(const rpc_cmd_t *cmd, void *d) {
+    (void)d;
+    return fs_total(cmd->params[0]);
+}
+
+static int process_readdir(const rpc_cmd_t *cmd, void *d) {
+    aram_addr_t dst = cmd->params[1];
+    const dirent_t *dirent;
+
+    (void)d;
+    assert_msg(!(dst & 0x3), "Dest ARAM address must be 4-byte aligned");
+
+    dirent = fs_readdir(cmd->params[0]);
+
+    if(!dirent)
+        return 0;
+
+    aram_write(dst, dirent, sizeof(*dirent));
+
+    return dst;
+}
 
 static int snd_read_header(void *d) {
     uint32_t hdr;
@@ -50,6 +162,17 @@ static int snd_read_header(void *d) {
     return hdr;
 }
 
+static void snd_ack_arm_irq(void) {
+    g2_write_32(REG_SPU_SH4_INT_RESET, SPU_INT_ENABLE_SH4);
+}
+
+static void snd_callback(uint32_t source, void *data) {
+    (void)source;
+
+    snd_ack_arm_irq();
+    rpc_process_inbound(data);
+}
+
 /* Initialize driver; note that this replaces the AICA program so that
    if you had anything else going on, it's gone now! */
 int snd_init(void) {
@@ -60,11 +183,18 @@ int snd_init(void) {
     /* Finish loading the stream driver */
     if(!initted) {
         spu_disable();
-        spu_memset_sq(0, 0, AICA_RAM_START);
-        amt = snd_stream_drv_size;
 
-        if(amt % 4)
-            amt = (amt + 4) & ~3;
+        spu_memset_sq(0, 0, AICA_RAM_START);
+        amt = __align_up(snd_stream_drv_size, 4);
+
+        asic_evt_disable(ASIC_EVT_SPU_IRQ, ASIC_IRQ9);
+
+        /* Even with the asic_evt_disable() above, the ARM is still able to send
+           interrupts; so we need to disable them completely. */
+        irq_disable_scoped();
+
+        /* Cancel any pending interrupt from the ARM */
+        snd_ack_arm_irq();
 
         dbglog(DBG_DEBUG, "snd_init(): loading %zu bytes into SPU RAM\n", amt);
         spu_memload_sq(0, (void *)snd_stream_drv_data, amt);
@@ -88,6 +218,26 @@ int snd_init(void) {
         /* Read the header */
         aram_read(&aica_header, header_addr, sizeof(aica_header));
 
+        aica_rpc.inbound = aica_header.sh4_queue;
+        aica_rpc.outbound = aica_header.arm_queue;
+
+        rpc_init(&aica_rpc);
+
+        rpc_register(AICA_CMD_PUTS, process_puts, NULL);
+        rpc_register(AICA_CMD_OPENFILE, process_openfile, NULL);
+        rpc_register(AICA_CMD_WRITEFILE, process_writefile, NULL);
+        rpc_register(AICA_CMD_READFILE, process_readfile, NULL);
+        rpc_register(AICA_CMD_CLOSEFILE, process_closefile, NULL);
+        rpc_register(AICA_CMD_SEEKFILE, process_seekfile, NULL);
+        rpc_register(AICA_CMD_TELLFILE, process_tellfile, NULL);
+        rpc_register(AICA_CMD_TOTALFILE, process_totalfile, NULL);
+        rpc_register(AICA_CMD_READDIR, process_readdir, NULL);
+
+        asic_evt_set_handler(ASIC_EVT_SPU_IRQ, snd_callback, &aica_rpc);
+
+        /* Enable IRQs from the ARM */
+        asic_evt_enable(ASIC_EVT_SPU_IRQ, ASIC_IRQ9);
+
         /* Initialize the RAM allocator */
         snd_mem_init(AICA_RAM_START);
     }
@@ -101,6 +251,10 @@ int snd_init(void) {
 void snd_shutdown(void) {
     if(initted) {
         spu_disable();
+
+        asic_evt_remove_handler(ASIC_EVT_SPU_IRQ);
+        asic_evt_disable(ASIC_EVT_SPU_IRQ, ASIC_IRQ9);
+
         snd_mem_shutdown();
         initted = 0;
     }
