@@ -300,3 +300,15 @@ void task_unboost(void)
     if (current_task->prio != current_task->real_prio)
         task_set_prio(current_task, current_task->real_prio);
 }
+
+ticks_t task_get_cputime(void)
+{
+    uint16_t counter, ticks;
+
+    irq_disable_scoped();
+
+    counter = task_read_counter();
+    ticks = counter - last_pos;
+
+    return current_task->cpu_time + ticks;
+}

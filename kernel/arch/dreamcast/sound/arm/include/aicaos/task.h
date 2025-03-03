@@ -104,6 +104,9 @@ static inline unsigned int ticks_to_ms(ticks_t ticks)
     return ticks * 10 / 441;
 }
 
+/* Get the time spent (in ticks) executing the current task. */
+ticks_t task_get_cputime(void);
+
 /* Read the hardware value of the task counter. */
 unsigned short task_read_counter(void);
 
