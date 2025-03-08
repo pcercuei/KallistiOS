@@ -177,14 +177,11 @@ int main(int argc, char **argv) {
     q_resp->process_ok = 1;
     q_resp->valid = 1;
 
-    /* Initialize the AICA part of the SPU */
-    aica_init();
-
     /* Wait for a command */
     for(; ;) {
         /* Update channel position counters */
         for(i = 0; i < 64; i++)
-            aica_get_pos(i);
+            chans[i].pos = aica_get_pos(i);
 
         /* Check for a command */
         if(q_cmd->process_ok)

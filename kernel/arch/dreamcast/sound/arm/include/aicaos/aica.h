@@ -12,31 +12,25 @@
 #ifndef __AICAOS_AICA_H
 #define __AICAOS_AICA_H
 
-#include "../aica_cmd_iface.h"
-
+#include <stdbool.h>
 #include <stdint.h>
 
-/* volatile unsigned char *dc_snd_base = (unsigned char *)0x00800000; */
-#define dc_snd_base ((volatile unsigned char *)0x00800000)
+/* Old API below. All of these will eventually be trashed. */
 
-/* Some convenience macros */
-#define SNDREG32A(x) ((volatile unsigned long *)(dc_snd_base + (x)))
-#define SNDREG32(x) (*SNDREG32A(x))
-#define SNDREG8A(x) (dc_snd_base + (x))
-#define SNDREG8(x) (*SNDREG8A(x))
-#define CHNREG32A(chn, x) SNDREG32A(0x80*(chn) + (x))
-#define CHNREG32(chn, x) (*CHNREG32A(chn, x))
-#define CHNREG8A(chn, x) SNDREG8A(0x80*(chn) + (x))
-#define CHNREG8(chn, x) (*CHNREG8A(chn, x))
+void aica_play(uint8_t ch, bool delay);
+void aica_sync_play(uint32_t chmap);
+void aica_vol(uint8_t ch);
+void aica_pan(uint8_t ch);
+void aica_freq(uint8_t ch);
+uint16_t aica_get_pos(uint8_t ch);
 
-void aica_init(void);
-void aica_play(int ch, int delay);
-void aica_sync_play(uint32 chmap);
-void aica_stop(int ch);
-void aica_vol(int ch);
-void aica_pan(int ch);
-void aica_freq(int ch);
-int aica_get_pos(int ch);
+/* New API below. */
+
+struct aica_channel_data;
+
+void aica_update(uint8_t chn, const struct aica_channel_data *data);
+void aica_start(uint8_t chn);
+void aica_stop(uint8_t chn);
 
 #endif  /* __AICAOS_AICA_H */
 
