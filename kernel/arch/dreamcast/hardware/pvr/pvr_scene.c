@@ -101,11 +101,11 @@ static void pvr_start_ta_rendering(void) {
         pvr_state.curr_to_texture = pvr_state.next_to_texture;
         pvr_state.to_txr_rp = pvr_state.next_to_txr_rp;
         pvr_state.to_txr_addr = pvr_state.next_to_txr_addr;
-    }
 
-    // Starting from that point, we consider that the Tile Accelerator
-    // might be busy.
-    pvr_state.ta_busy = 1;
+        // Starting from that point, we consider that the Tile Accelerator
+        // might be busy.
+        pvr_state.ta_busy = 1;
+    }
 }
 
 /* Begin collecting data for a frame of 3D output to the off-screen
