@@ -44,9 +44,9 @@ __BEGIN_DECLS
     \headerfile dc/vmu_pkg.h
 */
 typedef struct vmu_pkg {
-    char            desc_short[20];     /**< \brief Short file description */
-    char            desc_long[36];      /**< \brief Long file description */
-    char            app_id[20];         /**< \brief Application ID */
+    char            desc_short[16];     /**< \brief Short file description */
+    char            desc_long[32];      /**< \brief Long file description */
+    char            app_id[16];         /**< \brief Application ID */
     int             icon_cnt;           /**< \brief Number of icons */
     int             icon_anim_speed;    /**< \brief Icon animation speed */
     int             eyecatch_type;      /**< \brief "Eyecatch" type */
