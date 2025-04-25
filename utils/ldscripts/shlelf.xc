@@ -16,6 +16,39 @@ SECTIONS
     /* .gnu.warning sections are handled specially by elf32.em.  */
     *(.gnu.warning)
   } =0
+
+  /* Custom sections, aligned to the icache size */
+  .sub0 : ALIGN(8192) {
+    *(.sub0*)
+  }
+  .sub1 : ALIGN(8192) {
+    *(.sub1*)
+  }
+  .sub2 : ALIGN(8192) {
+    *(.sub2*)
+  }
+  .sub3 : ALIGN(8192) {
+    *(.sub3*)
+  }
+  .sub4 : ALIGN(8192) {
+    *(.sub4*)
+  }
+  .sub5 : ALIGN(8192) {
+    *(.sub5*)
+  }
+  .sub6 : ALIGN(8192) {
+    *(.sub6*)
+  }
+  .sub7 : ALIGN(8192) {
+    *(.sub7*)
+  }
+  .sub8 : ALIGN(8192) {
+    *(.sub8*)
+  }
+  .sub9 : ALIGN(8192) {
+    *(.sub9*)
+  }
+
   .init           :
   {
     KEEP (*(.init))
