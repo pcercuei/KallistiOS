@@ -3,7 +3,6 @@ OUTPUT_FORMAT("elf32-shl", "elf32-shl",
 	      "elf32-shl")
 OUTPUT_ARCH(sh)
 ENTRY(start)
-SEARCH_DIR("/usr/local/dc-new/sh-elf/sh-elf/lib");
 LOAD_OFFSET = DEFINED(LOAD_OFFSET) ? LOAD_OFFSET : 0x8c010000 ;
 
 SECTIONS
