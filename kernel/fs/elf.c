@@ -30,11 +30,10 @@
 
 #define ELF_DEBUG 0
 
-#if ELF_DEBUG
-#   define DBG(x) printf x
-#else
-#   define DBG(x)
-#endif
+#define DBG(x) do { \
+    if(__is_defined(ELF_DEBUG)) \
+        printf x; \
+} while(0)
 
 /* Finds a given symbol in a relocated ELF symbol table */
 static int find_sym(char *name, struct elf_sym_t* table, int tablelen) {

@@ -18,6 +18,13 @@
 #include <dc/sq.h>
 #include "pvr_internal.h"
 
+/* FIXME: NDEBUG is a reserved C macro, we shouldn't use it like that... */
+#ifdef NDEBUG
+#  define PVR_DEBUG 0
+#else
+#  define PVR_DEBUG 1
+#endif
+
 /*
 
    Scene rendering
@@ -176,13 +183,10 @@ inline static bool pvr_list_uses_dma(pvr_list_t list) {
    error (-1) is returned. */
 int pvr_list_begin(pvr_list_t list) {
     /* Check to make sure we can do this */
-#ifndef NDEBUG
-    if(!pvr_state.dma_mode && pvr_state.lists_closed & BIT(list)) {
+    if(PVR_DEBUG && !pvr_state.dma_mode && pvr_state.lists_closed & BIT(list)) {
         dbglog(DBG_WARNING, "pvr_list_begin: attempt to open already closed list\n");
         return -1;
     }
-
-#endif  /* !NDEBUG */
 
     /* If we already had a list open, close it first */
     if(pvr_state.list_reg_open != -1 && pvr_state.list_reg_open != (int)list)
@@ -209,13 +213,10 @@ int pvr_list_begin(pvr_list_t list) {
    simplicity we just always submit a blank primitive. */
 int pvr_list_finish(void) {
     /* Check to make sure we can do this */
-#ifndef NDEBUG
-    if(!pvr_state.dma_mode && pvr_state.list_reg_open == -1) {
+    if(PVR_DEBUG && !pvr_state.dma_mode && pvr_state.list_reg_open == -1) {
         dbglog(DBG_WARNING, "pvr_list_finish: attempt to close unopened list\n");
         return -1;
     }
-
-#endif  /* !NDEBUG */
 
     /* Check for immediate submission:
        A. If we are not in DMA mode, we must be submitting polygons
@@ -248,21 +249,17 @@ int pvr_list_finish(void) {
 
 int pvr_prim(const void *data, size_t size) {
     /* Check to make sure we can do this */
-#ifndef NDEBUG
-    if(pvr_state.list_reg_open == -1) {
+    if(PVR_DEBUG && pvr_state.list_reg_open == -1) {
         dbglog(DBG_WARNING, "pvr_prim: attempt to submit to unopened list\n");
         return -1;
     }
-#endif  /* !NDEBUG */
 
     if(!pvr_list_dma) {
-#ifndef NDEBUG
-        if((uintptr_t)data & 0x7) {
+        if(PVR_DEBUG && ((uintptr_t)data & 0x7)) {
             dbglog(DBG_WARNING, "pvr_prim: attempt to submit data unaligned "
                                 "to 8 bytes.\n");
             return -1;
         }
-#endif  /* !NDEBUG */
 
         /* Immediately send data via SQs. */
         sq_fast_cpy(SQ_MASK_DEST(PVR_TA_INPUT), data, size >> 5);

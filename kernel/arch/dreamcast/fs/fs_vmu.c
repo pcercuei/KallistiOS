@@ -166,16 +166,17 @@ static vmu_fh_t *vmu_open_vmu_dir(void) {
                 names[num][0] = p + 'a';
                 names[num][1] = u + '0';
                 num++;
-#ifdef VMUFS_DEBUG
-                dbglog(DBG_KDEBUG, "vmu_open_vmu_dir: found memcard (%c%d)\n", 'a' + p, u);
-#endif
+
+                if(__is_defined(VMUFS_DEBUG)) {
+                    dbglog(DBG_KDEBUG, "vmu_open_vmu_dir: found memcard (%c%d)\n",
+                           'a' + p, u);
+                }
             }
         }
     }
 
-#ifdef VMUFS_DEBUG
-    dbglog(DBG_KDEBUG, "# of memcards found: %d\n", num);
-#endif
+    if(__is_defined(VMUFS_DEBUG))
+        dbglog(DBG_KDEBUG, "# of memcards found: %d\n", num);
 
     if(!(dh = malloc(sizeof(vmu_dh_t))))
         return NULL;
@@ -500,9 +501,8 @@ static ssize_t vmu_write(void * hnd, const void *buffer, size_t cnt) {
 
         n = n / 512;
 
-#ifdef VMUFS_DEBUG
-        dbglog(DBG_KDEBUG, "VMUFS: extending file's filesize by %d\n", n);
-#endif
+        if(__is_defined(VMUFS_DEBUG))
+            dbglog(DBG_KDEBUG, "VMUFS: extending file's filesize by %d\n", n);
 
         /* We alloc another 512*n bytes for the file */
         tmp = realloc(fh->data, (fh->filesize + n) * 512);
@@ -519,10 +519,11 @@ static ssize_t vmu_write(void * hnd, const void *buffer, size_t cnt) {
     }
 
     /* insert the data in buffer into fh->data at fh->loc */
-#ifdef VMUFS_DEBUG
-    dbglog(DBG_KDEBUG, "VMUFS: adding %d bytes of data at loc %d (%d avail)\n",
-           cnt, fh->loc, fh->filesize * 512);
-#endif
+    if(__is_defined(VMUFS_DEBUG)) {
+        dbglog(DBG_KDEBUG, "VMUFS: adding %d bytes of data at loc %d (%d avail)\n",
+               cnt, fh->loc, fh->filesize * 512);
+    }
+
     memcpy(fh->data + fh->loc + fh->start, buffer, cnt);
     fh->loc += cnt;
 

@@ -13,10 +13,7 @@
 #include <stdlib.h>
 
 #include <kos/dbglog.h>
-
-#ifdef FRAME_POINTERS
 #include <arch/stack.h>
-#endif
 
 /* The default assert handler */
 static void __noreturn assert_handler_default(const char *file, int line,
@@ -30,9 +27,9 @@ static void __noreturn assert_handler_default(const char *file, int line,
         dbglog(DBG_CRITICAL, "Assertion \"%s\" failed at %s:%d in `%s': %s\n\n",
                expr, file, line, func, msg);
 
-#ifdef FRAME_POINTERS
-    arch_stk_trace(2);
-#endif
+    if(__is_defined(FRAME_POINTERS))
+        arch_stk_trace(2);
+
     abort();
     /* NOT REACHED */
 }
