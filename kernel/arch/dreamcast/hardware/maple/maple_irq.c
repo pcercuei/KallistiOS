@@ -14,6 +14,7 @@
 #include <dc/maple.h>
 #include <dc/asic.h>
 #include <dc/pvr.h>
+#include <kos/dbglog.h>
 #include <kos/thread.h>
 
 /*********************************************************************/

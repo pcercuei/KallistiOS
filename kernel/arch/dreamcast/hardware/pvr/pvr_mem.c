@@ -13,6 +13,7 @@
 #include <malloc.h> /* For the struct mallinfo defs */
 
 #include <kos/opts.h>
+#include <kos/dbglog.h>
 
 /*
 
