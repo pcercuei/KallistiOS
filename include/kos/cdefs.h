@@ -283,6 +283,13 @@
  */
 #define __stringify(arg) ""#arg
 
+/** \brief Check if a macro is defined to 1.
+
+    \param macro    The macro to check
+    \return         1 if the macro is defined to 1, 0 otherwise.
+ */
+#define __is_defined(macro) !__builtin_strcmp(__stringify(macro), "1")
+
 /** @} */
 
 #endif  /* __KOS_CDEFS_H */
