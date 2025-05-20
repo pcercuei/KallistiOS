@@ -277,6 +277,12 @@
 #define _array_size_chk(arr) 0
 #endif
 
+/** \brief Create a string from the argument.
+
+    \param arg      The text to stringify.
+ */
+#define __stringify(arg) ""#arg
+
 /** @} */
 
 #endif  /* __KOS_CDEFS_H */
