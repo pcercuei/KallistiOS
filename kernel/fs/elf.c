@@ -393,7 +393,7 @@ int elf_load(const char * fn, klibrary_t * shell, elf_prog_t * out) {
     }
 
     free(img);
-    DBG(("elf_load final ELF stats: memory image at %p, size %08lx\n\tentry pt %p\n", out->data, out->size, out->start));
+    DBG(("elf_load final ELF stats: memory image at %p, size %08lx\n", out->data, out->size));
 
     /* Flush the icache for that zone */
     icache_flush_range((uint32)out->data, out->size);
