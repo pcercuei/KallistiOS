@@ -220,8 +220,8 @@ static int __nonnull_all mutex_unlock_common(mutex_t *m, kthread_t *thd) {
     if (thd != IRQ_THREAD)
         thd->prio = thd->real_prio;
 
-    /* If we need to wake up a thread, do so. */
-    genwait_wake_one(m);
+    /* If we need to wake up threads, do so. */
+    genwait_wake_all(m);
 
     return 0;
 }
