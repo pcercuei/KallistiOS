@@ -311,22 +311,14 @@ typedef __attribute__((aligned(32))) struct pvr_poly_hdr {
     union {
         uint32_t mode2;                                 /**< Raw access to mode2 param */
         uint32_t mode2_0;                               /**< Legacy name */
-        uint32_t d5;                                    /**< Dummy value 5 */
         struct pvr_poly_hdr_mode2 m2;                   /**< mode2 parameters (modifiers: outside volume) */
     };
     union {
         uint32_t mode3;                                 /**< Raw access to mode3 param */
         uint32_t mode3_0;                               /**< Legacy name */
-        uint32_t d6;                                    /**< Dummy value 6 */
         struct pvr_poly_hdr_mode3 m3;                   /**< mode3 parameters (modifiers: outside volume) */
     };
     union {
-        struct {
-            uint32_t d1;                                /**< Dummy value 1 */
-            uint32_t d2;                                /**< Dummy value 2 */
-            uint32_t d3;                                /**< Dummy value 3 */
-            uint32_t d4;                                /**< Dummy value 4 */
-        };
         struct {
             /* Intensity color */
             float a;                                    /**< Intensity color alpha */
