@@ -1,16 +1,10 @@
 name: Linux build
 
-on:
-  push:
-    branches:
-      - master
-  pull_request:
-    branches:
-      - master
+on: push
 
 jobs:
   matrix:
-    if: github.repository == 'KallistiOS/KallistiOS'
+    if: github.repository == 'pcercuei/KallistiOS'
     runs-on: ubuntu-latest
     outputs:
       matrix: "${{ steps.setup-matrix.outputs.matrix }}"
@@ -26,7 +20,7 @@ jobs:
 
   build-toolchain:
     needs: matrix
-    if: github.repository == 'KallistiOS/KallistiOS'
+    if: github.repository == 'pcercuei/KallistiOS'
     strategy:
       fail-fast: false
       matrix:
@@ -66,7 +60,7 @@ jobs:
 
   build:
     needs: [matrix, build-toolchain]
-    if: ${{ always() }} && github.repository == 'KallistiOS/KallistiOS'
+    if: ${{ always() }} && github.repository == 'pcercuei/KallistiOS'
     strategy:
       fail-fast: false
       matrix:
