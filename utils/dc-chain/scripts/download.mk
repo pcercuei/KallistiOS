@@ -105,7 +105,7 @@ $(ARCHIVE_TARGETS):
 	@echo "+++ Downloading $(file)..."
 	$(call web_download,$(url))
 
-gcc_prereqs_script = $(if $(filter 1,$(use_custom_dependencies)),,cd ./$(name) && ./contrib/download_prerequisites)
+gcc_prereqs_script = $(if $(filter 1,$(use_custom_dependencies)),,cd ./$(name) && ${SHELL} ./contrib/download_prerequisites)
 $(ARCHIVE_EXTRACTS):
 	@echo "+++ Extracting $(file)..."
 	rm -rf $(name)
