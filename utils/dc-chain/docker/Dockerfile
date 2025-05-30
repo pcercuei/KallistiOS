@@ -37,12 +37,13 @@ RUN apk --update add --no-cache \
 # You may adapt the KallistiOS repository URL if needed
 ARG dc_chain=stable
 ARG makejobs=2
+ARG build_cmd=build
 
 RUN mkdir -p /opt/toolchains/dc
 COPY . /opt/toolchains/dc/kos
 
 RUN cd /opt/toolchains/dc/kos/utils/dc-chain \
-	&& make build toolchain_profile=$dc_chain makejobs=$makejobs \
+	&& make $build_cmd toolchain_profile=$dc_chain makejobs=$makejobs \
 	&& rm -rf /opt/toolchains/dc/kos
 
 # Stage 2
