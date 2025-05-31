@@ -1,0 +1,32 @@
+From 641c2f1ad8659b022178b5150088fe87498e2bd5 Mon Sep 17 00:00:00 2001
+From: Paul Cercueil <paul@crapouillou.net>
+Date: Sat, 31 May 2025 13:58:19 +0200
+Subject: [PATCH] download prerequisites with curl
+
+wget does not support FTP anymore.
+
+Signed-off-by: Paul Cercueil <paul@crapouillou.net>
+---
+ contrib/download_prerequisites | 6 +-----
+ 1 file changed, 1 insertion(+), 5 deletions(-)
+
+diff --git a/contrib/download_prerequisites b/contrib/download_prerequisites
+index b50f47c..62bc603 100755
+--- a/contrib/download_prerequisites
++++ b/contrib/download_prerequisites
+@@ -55,11 +55,7 @@ case $OS in
+   ;;
+ esac
+ 
+-if type wget > /dev/null ; then
+-  fetch='wget'
+-else
+-  fetch='curl -LO -u anonymous:'
+-fi
++fetch='curl -LO -u anonymous:'
+ chksum_extension='sha512'
+ directory='.'
+ 
+-- 
+2.47.2
+
