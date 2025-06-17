@@ -799,6 +799,10 @@ void thd_sleep(unsigned int ms) {
     genwait_wait((void *)0xffffffff, "thd_sleep", ms, NULL);
 }
 
+static bool thd_should_block(void) {
+    return !thd_no_runnable_threads() || !!genwait_next_timeout();
+}
+
 /* Manually cause a re-schedule */
 __used
 void thd_pass(void) {
@@ -806,7 +810,8 @@ void thd_pass(void) {
     if(irq_inside_int()) return;
 
     /* Pass off control manually */
-    thd_block_now(&thd_current->context);
+    if(thd_should_block())
+        thd_block_now(&thd_current->context);
 }
 
 /* Wait for a thread to exit */
