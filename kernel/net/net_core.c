@@ -13,9 +13,10 @@
 #include <kos/net.h>
 #include <kos/fs_socket.h>
 #include <kos/dbglog.h>
+#include <kos/workqueue.h>
 
+#include "net_core.h"
 #include "net_dhcp.h"
-#include "net_thd.h"
 #include "net_ipv4.h"
 #include "net_ipv6.h"
 
@@ -42,6 +43,8 @@ static int net_initted = 0;
 
 /* Default net device */
 netif_t *net_default_dev = NULL;
+
+workqueue_t *net_wq;
 
 /**************************************************************************/
 /* Driver list management
@@ -149,12 +152,14 @@ int net_init(uint32 ip) {
     if(net_initted)
         return 0;
 
+    /* Initialize the network thread. */
+    net_wq = workqueue_create();
+    if(!net_wq)
+        return -1;
+
     /* Detect and potentially initialize devices */
     if(net_dev_init() < 0)
         return -1;
-
-    /* Initialize the network thread. */
-    net_thd_init();
 
     /* Initialize the ARP cache */
     net_arp_init();
@@ -217,7 +222,7 @@ void net_shutdown(void) {
     /* Stop the network thread, since otherwise we might have problems down the
        road here... This simplifies things greatly in shutting everything else
        down in here. */
-    net_thd_kill();
+    workqueue_kill(net_wq);
 
     /* Shut down DHCP */
     net_dhcp_shutdown();
@@ -245,7 +250,7 @@ void net_shutdown(void) {
     net_arp_shutdown();
 
     /* Shut down the network thread */
-    net_thd_shutdown();
+    workqueue_destroy(net_wq);
 
     /* Shut down all activated network devices */
     LIST_FOREACH(cur, &net_if_list, if_list) {

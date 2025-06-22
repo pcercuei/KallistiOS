@@ -25,9 +25,9 @@
 
 #include <kos/dbglog.h>
 
+#include "net_core.h"
 #include "net_ipv4.h"
 #include "net_ipv6.h"
-#include "net_thd.h"
 
 /* Since some of this is a bit odd in its implementation, here's a few notes on
    what my thinking was while writing all of this...
@@ -181,7 +181,6 @@ LIST_HEAD(tcp_sock_list, tcp_sock);
 
 static struct tcp_sock_list tcp_socks = LIST_HEAD_INITIALIZER(0);
 static rw_semaphore_t tcp_sem = RWSEM_INITIALIZER;
-static int thd_cb_id = 0;
 
 /* Default starting window size for connections. This should be big enough as a
    starting point, in general. If you need to adjust it, you can do so... */
@@ -199,6 +198,9 @@ static int thd_cb_id = 0;
 
 /* Default hop limit (or ttl for IPv4) for new sockets */
 #define TCP_DEFAULT_HOPS    64
+
+/* Period at which the workqueue job will run */
+#define TCP_POLL_PERIOD_MS  50
 
 /* Flags that can be set in the off_flags field of the above struct */
 #define TCP_FLAG_FIN    0x01
@@ -458,7 +460,7 @@ ret_no_remove:
     sock->sock = -1;
 
     /* Don't free anything here, it will be dealt with later on in the
-       net_thd callback. */
+       workqueue job. */
     mutex_unlock(&sock->mutex);
     rwsem_write_unlock(&tcp_sem);
     return;
@@ -2838,11 +2840,9 @@ static int net_tcp_input(netif_t *src, int domain, const void *hdr,
     return 0;
 }
 
-static void tcp_thd_cb(void *arg) {
+static void net_tcp_job(workqueue_job_t *job) {
     struct tcp_sock *i, *tmp;
     uint64_t timer;
-
-    (void)arg;
 
     rwsem_read_lock(&tcp_sem);
 
@@ -2937,6 +2937,9 @@ static void tcp_thd_cb(void *arg) {
     }
 
     rwsem_write_unlock(&tcp_sem);
+
+    job->time_ms = timer_ms_gettime64() + TCP_POLL_PERIOD_MS;
+    workqueue_enqueue(net_wq, job);
 }
 
 /* Protocol handler for fs_socket. */
@@ -2963,9 +2966,13 @@ static fs_socket_proto_t proto = {
     net_tcp_poll                        /* poll */
 };
 
+static workqueue_job_t net_tcp_wq_job = {
+    .cb = net_tcp_job,
+};
+
 int net_tcp_init(void) {
-    if((thd_cb_id = net_thd_add_callback(tcp_thd_cb, NULL, 50)) < 0)
-        return -1;
+    net_tcp_wq_job.time_ms = timer_ms_gettime64() + TCP_POLL_PERIOD_MS;
+    workqueue_enqueue(net_wq, &net_tcp_wq_job);
 
     return fs_socket_proto_add(&proto);
 }
@@ -2973,9 +2980,8 @@ int net_tcp_init(void) {
 void net_tcp_shutdown(void) {
     struct tcp_sock *i, *tmp;
 
-    /* Kill the thread and make sure we can grab the lock */
-    if(thd_cb_id >= 0)
-        net_thd_del_callback(thd_cb_id);
+    /* Cancel the job and make sure we can grab the lock */
+    workqueue_cancel(net_wq, &net_tcp_wq_job);
 
     /* Disable IRQs so we can kill the sockets in peace... */
     irq_disable_scoped();
