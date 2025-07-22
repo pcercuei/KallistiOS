@@ -292,19 +292,6 @@ static const uint32_t tns_values_ms[] = {
     10995116, 43980465, 175921860, 703687442, 2814749767
 };
 
-void timer_ms_gettime(uint32_t *secs, uint32_t *msecs) {
-    const tu32_t_t val = timer_getticks(tns_values_ms, 37);
-
-    if(secs)  *secs = val.u0;
-    if(msecs) *msecs = val.u1;
-}
-
-uint64_t timer_ms_gettime64(void) {
-    const tu32_t_t val = timer_getticks(tns_values_ms, 37);
-
-    return (uint64_t)val.u0 * 1000ull + (uint64_t)val.u1;
-}
-
 tu32_t timer_get_time_ms(void) {
     return timer_getticks(tns_values_ms, 37);
 }
@@ -316,19 +303,6 @@ static const uint32_t tns_values_us[] = {
     10737418, 42949673, 171798692, 687194767, 2748779069,
 };
 
-void timer_us_gettime(uint32_t *secs, uint32_t *usecs) {
-    const tu32_t val = timer_getticks(tns_values_us, 27);
-
-    if(secs)  *secs = val.u0;
-    if(usecs) *usecs = val.u1;
-}
-
-uint64_t timer_us_gettime64(void) {
-    const tu32_t val = timer_getticks(tns_values_us, 27);
-
-    return (uint64_t)val.u0 * 1000000ull + (uint64_t)val.u1;
-}
-
 tu32_t timer_get_time_us(void) {
     return timer_getticks(tns_values_us, 27);
 }
@@ -337,19 +311,6 @@ tu32_t timer_get_time_us(void) {
 static const uint32_t tns_values_ns[] = {
     80, 320, 1280, 5120, 20480,
 };
-
-void timer_ns_gettime(uint32_t *secs, uint32_t *nsecs) {
-    const tu32_t val = timer_getticks(tns_values_ns, 0);
-
-    if(secs)  *secs = val.u0;
-    if(nsecs) *nsecs = val.u1;
-}
-
-uint64_t timer_ns_gettime64(void) {
-    const tu32_t val = timer_getticks(tns_values_ns, 0);
-
-    return (uint64_t)val.u0 * 1000000000ull + (uint64_t)val.u1;
-}
 
 tu32_t timer_get_time_ns(void) {
     return timer_getticks(tns_values_ns, 0);
