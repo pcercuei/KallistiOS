@@ -13,6 +13,7 @@
 #include <arch/timer.h>
 #include <arch/irq.h>
 #include <kos/regfield.h>
+#include <kos/timer.h>
 #include <kos/tuple.h>
 
 /* Register access macros */
@@ -304,6 +305,10 @@ uint64_t timer_ms_gettime64(void) {
     return (uint64_t)val.u0 * 1000ull + (uint64_t)val.u1;
 }
 
+tu32_t timer_get_time_ms(void) {
+    return timer_getticks(tns_values_ms, 37);
+}
+
 /* Microsecond timer */
 static const uint32_t tns_values_us[] = {
     /* 80, 320, 1280, 5120, 20480,
@@ -324,6 +329,10 @@ uint64_t timer_us_gettime64(void) {
     return (uint64_t)val.u0 * 1000000ull + (uint64_t)val.u1;
 }
 
+tu32_t timer_get_time_us(void) {
+    return timer_getticks(tns_values_us, 27);
+}
+
 /* Nanosecond timer */
 static const uint32_t tns_values_ns[] = {
     80, 320, 1280, 5120, 20480,
@@ -340,6 +349,10 @@ uint64_t timer_ns_gettime64(void) {
     const tu32_t val = timer_getticks(tns_values_ns, 0);
 
     return (uint64_t)val.u0 * 1000000000ull + (uint64_t)val.u1;
+}
+
+tu32_t timer_get_time_ns(void) {
+    return timer_getticks(tns_values_ns, 0);
 }
 
 /* Primary kernel timer. What we'll do here is handle actual timer IRQs
