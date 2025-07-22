@@ -13,6 +13,7 @@
 #include <arch/timer.h>
 #include <arch/irq.h>
 #include <kos/regfield.h>
+#include <kos/tuple.h>
 
 /* Register access macros */
 #define TIMER8(o)   ( *((volatile uint8_t  *)(TIMER_BASE + (o))) )
@@ -234,16 +235,11 @@ void timer_ms_disable(void) {
     timer_disable_ints(TMU2);
 }
 
-/* Internal structure used to hold timer values in seconds + ticks. */
-typedef struct timer_value {
-    uint32_t secs, ticks;
-} timer_val_t;
-
 /* Generic function for retrieving the current time maintained by TMU2. 
    Returns the total amount of time that has elapsed since KOS has been
    initialized by using a LUT of precomputed, scaled timing values (tns)
    plus a shift for optimized division. */
-static timer_val_t timer_getticks(const uint32_t *tns, uint32_t shift) {
+static tu32_t timer_getticks(const uint32_t *tns, uint32_t shift) {
     uint32_t secs, unf1, unf2, counter1, counter2, delta, ticks;
     uint16_t tmu2;
     
@@ -285,7 +281,7 @@ static timer_val_t timer_getticks(const uint32_t *tns, uint32_t shift) {
     final division. */
     ticks = ((uint64_t)delta * tns[tmu2 & TPSC]) >> shift;
 
-    return (timer_val_t){ .secs = secs, .ticks = ticks, };
+    return (tu32_t){ secs, ticks, };
 }
 
 /* Millisecond timer */
@@ -296,16 +292,16 @@ static const uint32_t tns_values_ms[] = {
 };
 
 void timer_ms_gettime(uint32_t *secs, uint32_t *msecs) {
-    const timer_val_t val = timer_getticks(tns_values_ms, 37);
+    const tu32_t_t val = timer_getticks(tns_values_ms, 37);
 
-    if(secs)  *secs = val.secs;
-    if(msecs) *msecs = val.ticks;
+    if(secs)  *secs = val.u0;
+    if(msecs) *msecs = val.u1;
 }
 
 uint64_t timer_ms_gettime64(void) {
-   const timer_val_t val = timer_getticks(tns_values_ms, 37);
+    const tu32_t_t val = timer_getticks(tns_values_ms, 37);
 
-    return (uint64_t)val.secs * 1000ull + (uint64_t)val.ticks;
+    return (uint64_t)val.u0 * 1000ull + (uint64_t)val.u1;
 }
 
 /* Microsecond timer */
@@ -316,16 +312,16 @@ static const uint32_t tns_values_us[] = {
 };
 
 void timer_us_gettime(uint32_t *secs, uint32_t *usecs) {
-    const timer_val_t val = timer_getticks(tns_values_us, 27);
+    const tu32_t val = timer_getticks(tns_values_us, 27);
 
-    if(secs)  *secs = val.secs;
-    if(usecs) *usecs = val.ticks;
+    if(secs)  *secs = val.u0;
+    if(usecs) *usecs = val.u1;
 }
 
 uint64_t timer_us_gettime64(void) {
-   const timer_val_t val = timer_getticks(tns_values_us, 27);
+    const tu32_t val = timer_getticks(tns_values_us, 27);
 
-    return (uint64_t)val.secs * 1000000ull + (uint64_t)val.ticks;
+    return (uint64_t)val.u0 * 1000000ull + (uint64_t)val.u1;
 }
 
 /* Nanosecond timer */
@@ -333,17 +329,17 @@ static const uint32_t tns_values_ns[] = {
     80, 320, 1280, 5120, 20480,
 };
 
-void timer_ns_gettime(uint32_t *secs, uint32_t *nsecs) { 
-    const timer_val_t val = timer_getticks(tns_values_ns, 0);
+void timer_ns_gettime(uint32_t *secs, uint32_t *nsecs) {
+    const tu32_t val = timer_getticks(tns_values_ns, 0);
 
-    if(secs)  *secs = val.secs;
-    if(nsecs) *nsecs = val.ticks;
+    if(secs)  *secs = val.u0;
+    if(nsecs) *nsecs = val.u1;
 }
 
 uint64_t timer_ns_gettime64(void) {
-   const timer_val_t val = timer_getticks(tns_values_ns, 0);
+    const tu32_t val = timer_getticks(tns_values_ns, 0);
 
-    return (uint64_t)val.secs * 1000000000ull + (uint64_t)val.ticks;
+    return (uint64_t)val.u0 * 1000000000ull + (uint64_t)val.u1;
 }
 
 /* Primary kernel timer. What we'll do here is handle actual timer IRQs
