@@ -28,6 +28,7 @@
 #define __ARCH_TIMER_H
 
 
+#include <stdbool.h>
 #include <stdint.h>
 #include <sys/cdefs.h>
 __BEGIN_DECLS
@@ -430,6 +431,13 @@ void timer_primary_wakeup(uint32_t millis);
     be called.
 */
 void timer_primary_stop(void);
+
+/** \brief   Return whether or not the primary timer is running.
+    \ingroup tmu_primary
+
+    \return                 True if the primary timer is running, false otherwise.
+*/
+bool timer_primary_running(void);
 
 /** \cond */
 /* Init function */
