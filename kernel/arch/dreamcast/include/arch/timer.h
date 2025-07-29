@@ -423,6 +423,14 @@ timer_primary_callback_t timer_primary_set_callback(timer_primary_callback_t cal
 */
 void timer_primary_wakeup(uint32_t millis);
 
+/** \brief   Stop the primary timer.
+    \ingroup tmu_primary
+
+    This function will stop the primary timer. Its registered callback won't
+    be called.
+*/
+void timer_primary_stop(void);
+
 /** \cond */
 /* Init function */
 int timer_init(void);
