@@ -473,6 +473,12 @@ kthread_t *thd_create_ex(const kthread_attr_t *restrict attr,
 
             /* Schedule it */
             thd_add_to_runnable(nt, 0);
+
+            /* Trigger a reschedule (except for our tasks), to make sure
+             * that we'll switch to the new thread if it's higher priority,
+             * and that we'll start the timer if needed. */
+            if(routine && routine != thd_idle_task && routine != thd_reaper)
+                thd_block_now(&thd_current->context);
         }
     }
 
