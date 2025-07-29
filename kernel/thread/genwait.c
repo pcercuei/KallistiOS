@@ -125,7 +125,7 @@ static void genwait_unqueue(kthread_t * thd) {
 }
 
 static int genwait_wake_thd_cnt(void *obj, int cntmax, kthread_t *thd, int err) {
-    kthread_t       * t, * nt;
+    kthread_t       *t, *nt, *best = NULL;
     struct slpquehead   * qp;
     int         cnt;
 
@@ -154,6 +154,9 @@ static int genwait_wake_thd_cnt(void *obj, int cntmax, kthread_t *thd, int err) 
                 CONTEXT_RET(t->context) = 0;
             }
 
+            if(!best || t->prio < best->prio)
+                best = t;
+
             /* Check to see if we've filled our quota */
             if(cntmax > 0) {
                 cnt++;
@@ -162,6 +165,16 @@ static int genwait_wake_thd_cnt(void *obj, int cntmax, kthread_t *thd, int err) 
                     break;
             }
         }
+    }
+
+    if(best && (best->prio < thd_current->prio || !timer_primary_running())) {
+        /* If we just woke up a higher-priority thread, or we woke up a
+         * lower-priority thread but the scheduler's timer is not running, we
+         * should force a reschedule. */
+        if(irq_inside_int())
+            thd_schedule_next(best);
+        else
+            thd_block_now(&thd_current->context);
     }
 
     return cnt;
