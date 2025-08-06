@@ -87,3 +87,4 @@ Once you've set up the environment and are ready to begin developing, a good pla
 [DCEmulation Forums](http://dcemulation.org/phpBB/viewforum.php?f=29): Goldmine of Dreamcast development information and history  
 IRC Channel: irc.libera.chat `#dreamcastdev`
 
+Add CI!
