@@ -18,7 +18,7 @@
 #include <stdint.h>
 #include <stdio.h>
 
-#include <sys/cdefs.h>
+#include <kos/cdefs.h>
 __BEGIN_DECLS
 
 #include <dc/pvr/pvr_regs.h>

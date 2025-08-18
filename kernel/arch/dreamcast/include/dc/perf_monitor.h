@@ -18,7 +18,7 @@
 #ifndef __KOS_PERF_MONITOR_H
 #define __KOS_PERF_MONITOR_H
 
-#include <sys/cdefs.h>
+#include <kos/cdefs.h>
 __BEGIN_DECLS
 
 #include <dc/perfctr.h>

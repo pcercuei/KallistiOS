@@ -8,7 +8,7 @@
 #ifndef __LOCAL_NET_THD_H
 #define __LOCAL_NET_THD_H
 
-#include <sys/cdefs.h>
+#include <kos/cdefs.h>
 #include <stdint.h>
 
 __BEGIN_DECLS

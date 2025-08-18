@@ -23,7 +23,7 @@
 #ifndef __KOS_FS_PTY_H
 #define __KOS_FS_PTY_H
 
-#include <sys/cdefs.h>
+#include <kos/cdefs.h>
 __BEGIN_DECLS
 
 #include <kos/fs.h>

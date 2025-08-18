@@ -28,7 +28,7 @@
 #include <stdint.h>
 
 #include <arch/irq.h>
-#include <sys/cdefs.h>
+#include <kos/cdefs.h>
 __BEGIN_DECLS
 
 /** \defgroup traps  Traps

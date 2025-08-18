@@ -33,7 +33,7 @@
 #ifndef __DC_MAPLE_PURUPURU_H
 #define __DC_MAPLE_PURUPURU_H
 
-#include <sys/cdefs.h>
+#include <kos/cdefs.h>
 __BEGIN_DECLS
 
 #include <arch/types.h>

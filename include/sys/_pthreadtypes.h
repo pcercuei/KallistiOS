@@ -8,7 +8,7 @@
 #ifndef __SYS_PTHREADTYPES_H
 #define __SYS_PTHREADTYPES_H
 
-#include <sys/cdefs.h>
+#include <kos/cdefs.h>
 __BEGIN_DECLS
 
 typedef unsigned long int pthread_t;

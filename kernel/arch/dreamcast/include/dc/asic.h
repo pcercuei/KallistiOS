@@ -22,7 +22,7 @@
 #ifndef __DC_ASIC_H
 #define __DC_ASIC_H
 
-#include <sys/cdefs.h>
+#include <kos/cdefs.h>
 __BEGIN_DECLS
 
 #include <stdint.h>

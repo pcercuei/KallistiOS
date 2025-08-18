@@ -20,7 +20,7 @@
 #ifndef __KOS_NET_H
 #define __KOS_NET_H
 
-#include <sys/cdefs.h>
+#include <kos/cdefs.h>
 #include <stdint.h>
 __BEGIN_DECLS
 

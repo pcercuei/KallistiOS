@@ -24,7 +24,7 @@
 
 #include <stdbool.h>
 #include <stdint.h>
-#include <sys/cdefs.h>
+#include <kos/cdefs.h>
 __BEGIN_DECLS
 
 /** \defgroup video_display Display

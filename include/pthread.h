@@ -32,7 +32,7 @@
 
 /** \cond **/
 
-#include <sys/cdefs.h>
+#include <kos/cdefs.h>
 #include <sys/features.h>
 #include <sys/_pthreadtypes.h>
 

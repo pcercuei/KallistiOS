@@ -22,7 +22,7 @@
 #ifndef __DC_SOUND_SOUND_H
 #define __DC_SOUND_SOUND_H
 
-#include <sys/cdefs.h>
+#include <kos/cdefs.h>
 __BEGIN_DECLS
 
 #include <arch/types.h>

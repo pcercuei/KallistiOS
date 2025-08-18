@@ -20,7 +20,7 @@
 #ifndef __ARCH_EXEC_H
 #define __ARCH_EXEC_H
 
-#include <sys/cdefs.h>
+#include <kos/cdefs.h>
 __BEGIN_DECLS
 
 /** \defgroup system_overlays   Overlays

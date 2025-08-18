@@ -8,7 +8,7 @@
 #ifndef __LOCAL_NET_DHCP_H
 #define __LOCAL_NET_DHCP_H
 
-#include <sys/cdefs.h>
+#include <kos/cdefs.h>
 
 __BEGIN_DECLS
 

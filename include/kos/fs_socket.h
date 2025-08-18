@@ -25,7 +25,7 @@
 #ifndef __KOS_FS_SOCKET_H
 #define __KOS_FS_SOCKET_H
 
-#include <sys/cdefs.h>
+#include <kos/cdefs.h>
 
 __BEGIN_DECLS
 

@@ -29,7 +29,7 @@
 #include <stdalign.h>
 #include <stdbool.h>
 #include <stdint.h>
-#include <sys/cdefs.h>
+#include <kos/cdefs.h>
 __BEGIN_DECLS
 
 /** \defgroup irqs  Interrupts

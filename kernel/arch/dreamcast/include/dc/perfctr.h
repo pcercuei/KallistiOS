@@ -25,7 +25,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-#include <sys/cdefs.h>
+#include <kos/cdefs.h>
 __BEGIN_DECLS
 
 /** \defgroup   perf_counters Performance Counters

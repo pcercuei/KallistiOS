@@ -32,7 +32,7 @@
 #ifndef __DC_G2BUS_H
 #define __DC_G2BUS_H
 
-#include <sys/cdefs.h>
+#include <kos/cdefs.h>
 __BEGIN_DECLS
 
 #include <stdint.h>

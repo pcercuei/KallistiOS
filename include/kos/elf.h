@@ -21,7 +21,7 @@
 #ifndef __KOS_ELF_H
 #define __KOS_ELF_H
 
-#include <sys/cdefs.h>
+#include <kos/cdefs.h>
 __BEGIN_DECLS
 
 #include <stdint.h>

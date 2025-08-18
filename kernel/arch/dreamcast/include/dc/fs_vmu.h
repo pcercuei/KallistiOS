@@ -30,7 +30,7 @@
 #ifndef __DC_FS_VMU_H
 #define __DC_FS_VMU_H
 
-#include <sys/cdefs.h>
+#include <kos/cdefs.h>
 __BEGIN_DECLS
 
 #include <kos/fs.h>

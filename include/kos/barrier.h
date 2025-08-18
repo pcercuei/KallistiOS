@@ -7,7 +7,7 @@
 #ifndef __KOS_BARRIER_H
 #define __KOS_BARRIER_H
 
-#include <sys/cdefs.h>
+#include <kos/cdefs.h>
 __BEGIN_DECLS
 
 /** \file       kos/barrier.h

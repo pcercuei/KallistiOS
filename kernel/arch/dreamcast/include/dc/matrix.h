@@ -24,7 +24,7 @@
 #ifndef __DC_MATRIX_H
 #define __DC_MATRIX_H
 
-#include <sys/cdefs.h>
+#include <kos/cdefs.h>
 __BEGIN_DECLS
 
 #include <dc/vector.h>

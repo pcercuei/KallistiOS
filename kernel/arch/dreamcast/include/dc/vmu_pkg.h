@@ -20,7 +20,7 @@
 #ifndef __DC_VMU_PKG_H
 #define __DC_VMU_PKG_H
 
-#include <sys/cdefs.h>
+#include <kos/cdefs.h>
 __BEGIN_DECLS
 
 #include <stdint.h>

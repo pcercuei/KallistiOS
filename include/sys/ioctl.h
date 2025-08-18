@@ -20,7 +20,7 @@
 #ifndef __SYS_IOCTL_H
 #define __SYS_IOCTL_H
 
-#include <sys/cdefs.h>
+#include <kos/cdefs.h>
 
 __BEGIN_DECLS
 

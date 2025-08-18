@@ -49,7 +49,7 @@
 #ifndef __KOS_FS_ROMDISK_H
 #define __KOS_FS_ROMDISK_H
 
-#include <sys/cdefs.h>
+#include <kos/cdefs.h>
 #include <stdbool.h>
 #include <stdint.h>
 __BEGIN_DECLS

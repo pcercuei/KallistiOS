@@ -24,7 +24,7 @@
 #ifndef __DC_MAPLE_KEYBOARD_H
 #define __DC_MAPLE_KEYBOARD_H
 
-#include <sys/cdefs.h>
+#include <kos/cdefs.h>
 __BEGIN_DECLS
 
 #include <dc/maple.h>

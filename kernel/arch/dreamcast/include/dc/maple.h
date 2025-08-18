@@ -36,7 +36,7 @@
 #ifndef __DC_MAPLE_H
 #define __DC_MAPLE_H
 
-#include <sys/cdefs.h>
+#include <kos/cdefs.h>
 __BEGIN_DECLS
 
 #include <stdbool.h>

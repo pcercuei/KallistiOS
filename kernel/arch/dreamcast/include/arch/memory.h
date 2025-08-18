@@ -20,7 +20,7 @@
 #ifndef __ARCH_MEMORY_H
 #define __ARCH_MEMORY_H
 
-#include <sys/cdefs.h>
+#include <kos/cdefs.h>
 __BEGIN_DECLS
 
 /** \defgroup memory Address Space

@@ -18,7 +18,7 @@
 #ifndef __DC_FIFO_H
 #define __DC_FIFO_H
 
-#include <sys/cdefs.h>
+#include <kos/cdefs.h>
 __BEGIN_DECLS
 
 #include <kos/regfield.h>

@@ -23,7 +23,7 @@
 #ifndef __KOS_GENWAIT_H
 #define __KOS_GENWAIT_H
 
-#include <sys/cdefs.h>
+#include <kos/cdefs.h>
 __BEGIN_DECLS
 
 #include <kos/thread.h>

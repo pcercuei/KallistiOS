@@ -24,7 +24,7 @@
 #ifndef __ARCH_RTC_H
 #define __ARCH_RTC_H
 
-#include <sys/cdefs.h>
+#include <kos/cdefs.h>
 __BEGIN_DECLS
 
 #include <time.h>

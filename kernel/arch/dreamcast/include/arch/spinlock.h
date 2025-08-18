@@ -25,7 +25,7 @@
 
 /* Defines processor specific spinlocks */
 
-#include <sys/cdefs.h>
+#include <kos/cdefs.h>
 __BEGIN_DECLS
 
 #include <stdbool.h>

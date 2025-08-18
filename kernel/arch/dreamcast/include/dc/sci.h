@@ -18,7 +18,7 @@
 #ifndef __DC_SCI_H
 #define __DC_SCI_H
 
-#include <sys/cdefs.h>
+#include <kos/cdefs.h>
 __BEGIN_DECLS
 
 #include <arch/dmac.h>

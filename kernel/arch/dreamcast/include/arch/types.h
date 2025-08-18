@@ -19,7 +19,7 @@
 #ifndef __ARCH_TYPES_H
 #define __ARCH_TYPES_H
 
-#include <sys/cdefs.h>
+#include <kos/cdefs.h>
 __BEGIN_DECLS
 
 #include <stddef.h>

@@ -18,7 +18,7 @@
     \author Paul Cercueil
 */
 
-#include <sys/cdefs.h>
+#include <kos/cdefs.h>
 __BEGIN_DECLS
 
 #include <dc/maple.h>
