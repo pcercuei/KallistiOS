@@ -176,7 +176,7 @@ static inline int __gthread_objc_mutex_allocate(objc_mutex_t mutex) {
 /* Deallocate a mutex. */
 static inline int __gthread_objc_mutex_deallocate(objc_mutex_t mutex) {
     mutex_t *m = (mutex_t *)mutex->backend;
-    uint32 old;
+    irq_mask_t old;
 
     old = irq_disable();
 
