@@ -31,6 +31,9 @@ see the files COPYING3 and COPYING.RUNTIME respectively.  If not, see
 #ifndef GCC_GTHR_KOS_H
 #define GCC_GTHR_KOS_H
 
+#include <sys/cdefs.h>
+__BEGIN_DECLS
+
 /* KallistiOS threads specific definitions. */
 
 #define __GTHREADS 1
@@ -458,5 +461,6 @@ static inline int __gthread_cond_destroy(__gthread_cond_t *cond) {
 
 #endif /* !_LIBOBJC */
 
+__END_DECLS
 
 #endif /* ! GCC_GTHR_KOS_H */
