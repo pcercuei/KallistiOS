@@ -32,6 +32,6 @@ ifdef enable_ada
   endif
 endif
 	$(MAKE) -C $(build) $(install_mode) DESTDIR=$(DESTDIR) $(to_log)
-	$(toolchain_path)/bin/$(target)-gcc-ar d \
+	$(target)-gcc-ar d \
 		$(shell $(target)-gcc -print-file-name=libgcc.a) fake-kos.o $(to_log)
 	$(clean_up)
