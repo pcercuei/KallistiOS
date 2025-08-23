@@ -144,7 +144,6 @@ typedef struct timespec __gthread_time_t;
 # define __GTHREAD_COND_INIT_FUNCTION __gthread_cond_init_func
 #endif
 
-
 static inline int __gthread_active_p(void) {
     return 1;
 }
