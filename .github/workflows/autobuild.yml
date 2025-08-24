@@ -57,6 +57,7 @@ jobs:
       run: >
         sudo docker build
         -t pcercuei/$platform-toolchain:$profile
+        --build-arg platform=$platform
         --build-arg profile=$profile
         -f $GITHUB_WORKSPACE/utils/dc-chain/docker/Dockerfile
         $GITHUB_WORKSPACE
