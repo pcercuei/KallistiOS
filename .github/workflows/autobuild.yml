@@ -72,7 +72,16 @@ jobs:
         sudo docker push $dockerhub_user/$platform-toolchain:$profile
         sudo docker logout
 
+    - name: build-kos-check
+      run: |
+        if [ -d $GITHUB_WORKSPACE/kernel/arch/$platform ] ; then
+          echo "BUILD_KOS=true" >> $GITHUB_ENV
+        else
+          echo "BUILD_KOS=false" >> $GITHUB_ENV
+        fi
+
     - name: build-kos
+      if: env.BUILD_KOS == 'true'
       run: >
         # Login to Docker before building to get the usage limits of an authenticated user
         echo "${{ secrets.DOCKER_HUB_KEY }}" | sudo docker login -u $dockerhub_user --password-stdin
