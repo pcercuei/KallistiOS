@@ -10,6 +10,9 @@ on: [push, pull_request]
 #    branches:
 #      - master
 
+env:
+  dockerhub_user: pcercuei
+
 jobs:
   matrix:
     if: github.repository == 'pcercuei/KallistiOS' # TODO
@@ -56,22 +59,22 @@ jobs:
       if: steps.filter.outputs.paths == 'true'
       run: >
         sudo docker build
-        -t pcercuei/$platform-toolchain:$profile
+        -t $dockerhub_user/$platform-toolchain:$profile
         --build-arg platform=$platform
         --build-arg profile=$profile
         -f $GITHUB_WORKSPACE/utils/dc-chain/docker/Dockerfile
         $GITHUB_WORKSPACE
 
     - name: publish
-      if: steps.filter.outputs.paths == 'true' && ${{ github.event_name == 'push' }}
+      if: steps.filter.outputs.paths == 'true' && github.event_name == 'push'
       run: |
-        echo "${{ secrets.DOCKER_HUB_KEY }}" | sudo docker login -u pcercuei --password-stdin
-        sudo docker push pcercuei/$platform-toolchain:$profile
+        echo "${{ secrets.DOCKER_HUB_KEY }}" | sudo docker login -u $dockerhub_user --password-stdin
+        sudo docker push $dockerhub_user/$platform-toolchain:$profile
         sudo docker logout
 
     - name: build-kos
       run: >
         sudo docker run --rm --name kallistios
         -v $GITHUB_WORKSPACE:/workspace -w /workspace
-        pcercuei/$platform-toolchain:$profile
+        $dockerhub_user/$platform-toolchain:$profile
         .github/build-kos.sh $platform
