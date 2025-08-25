@@ -32,18 +32,21 @@ RUN apk --update add --no-cache \
         libjpeg-turbo-dev \
         libpng-dev \
         python3 \
+        mingw-w64-gcc \
         && rm -rf /var/cache/apk/*
 
 # Making Sega Dreamcast toolchains
 # You may adapt the KallistiOS repository URL if needed
 ARG platform=dreamcast
 ARG profile=stable
+ARG CC=gcc
+ARG CXX=g++
 
 RUN mkdir -p /opt/toolchains/dc
 COPY . /opt/toolchains/dc/kos
 
 RUN cd /opt/toolchains/dc/kos/utils/dc-chain \
-	&& make build platform=$platform toolchain_profile=$profile verbose=0 \
+	&& make build platform=$platform toolchain_profile=$profile CC=$CC CXX=$CXX \
 	&& rm -rf /opt/toolchains/dc/kos
 
 # Stage 2
