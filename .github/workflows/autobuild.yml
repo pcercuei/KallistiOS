@@ -74,7 +74,12 @@ jobs:
 
     - name: build-kos
       run: >
+        # Login to Docker before building to get the usage limits of an authenticated user
+        echo "${{ secrets.DOCKER_HUB_KEY }}" | sudo docker login -u $dockerhub_user --password-stdin
+
         sudo docker run --rm --name kallistios
         -v $GITHUB_WORKSPACE:/workspace -w /workspace
         $dockerhub_user/$platform-toolchain:$profile
         .github/build-kos.sh $platform
+
+        sudo docker logout
