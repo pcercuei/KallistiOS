@@ -11,6 +11,7 @@ $(build_gcc_pass1): logdir
 	> $(log)
 	cd $(build); \
 	    ../$(src_dir)/configure \
+	      --host=$(host_triplet) \
 	      --target=$(target) \
 	      --prefix=$(toolchain_path) \
 	      --with-gnu-as \
