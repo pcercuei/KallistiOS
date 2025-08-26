@@ -12,6 +12,7 @@ $(build_binutils): logdir
 	> $(log)
 	cd $(build); \
       ../$(src_dir)/configure \
+        --host=$(host_triplet) \
         --target=$(target) \
         --prefix=$(toolchain_path) \
         --disable-werror \
