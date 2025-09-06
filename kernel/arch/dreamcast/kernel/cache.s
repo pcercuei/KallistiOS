@@ -19,6 +19,7 @@
     .globl _dcache_purge_range
     .globl _dcache_purge_all
     .globl _dcache_purge_all_with_buffer
+    .globl _dcache_toggle_ocindex
 
 ! This routine goes through and flushes/invalidates the icache 
 ! for a given range.
@@ -115,6 +116,66 @@ _dcache_inval_range:
     rts
     nop
 
+_dcache_toggle_ocindex:
+    ! Disable interrupts
+    mov.l    irq_mask,r0
+    mov      #0, r3
+    stc      sr,r5
+    mov.l    mem_mask,r1
+    and      r5,r0
+    mov.l    p2_offset,r2
+    or       #0xf0,r0
+    ldc      r0,sr
+    nop
+
+    ! Compute P2 address of 2: label into r0
+    mova     2f,r0
+    mov.l    ccr_addr,r6
+
+    and      r1,r0
+    mov.l    dca_addr, r1
+
+    add      r2,r0
+    mov.w    cache_lines, r2
+
+    ! dcache invalidation loop, same as dcache_purge_all
+1:
+    mov.l    r3, @r1     ! Update dcache entry
+    dt       r2
+    bf/s     1b
+    add      #32, r1     ! Move on to next entry
+
+    jmp      @r0
+    nop
+
+2:
+    ! We're in P2 now, with dcache purged.
+    ! Load CCR, enable/disable OCINDEX, then store it back.
+    mov.l    @r6,r0
+    tst      r4,r4
+
+    or       #0x80,r0
+    bf 3f
+    xor      #0x80,r0
+3:
+    mov.l    r0,@r6
+
+    mov      #4,r0
+
+    ! Small wait loop to make sure it is safe to go back to P0
+4:
+    dt r0
+    nop
+
+    bf/s 4b
+    nop
+
+    ! Re-enable interrupts
+    ldc      r5,sr
+
+    ! Back to calling code
+    rts
+    nop
 
 ! This routine goes through and forces a write-back on the
 ! specified data range. Use prior to dcache_inval_range if you
@@ -259,6 +320,14 @@ ic_valid_mask:
     .long    0xfffffc00
 ifr_addr:    
     .long    .iflush_real
+irq_mask:
+    .long    0xefffff0f
+mem_mask:
+    .long    0x1fffffff
+p2_offset:
+    .long    0xa0000000
+ccr_addr:
+    .long    0xff00001c
 
 ! D-cache (Data cache)
 dca_addr:

@@ -26,6 +26,7 @@
 #include <kos/cdefs.h>
 __BEGIN_DECLS
 
+#include <stdbool.h>
 #include <stdint.h>
 
 /** \defgroup system_cache Cache
@@ -229,6 +230,8 @@ static __always_inline void dcache_alloc_block(void *src, uint32_t value) {
              : "r" (src32), "z" (value)
     );
 }
+
+void dcache_toggle_ocindex(bool en);
 
 /** @} */
 
