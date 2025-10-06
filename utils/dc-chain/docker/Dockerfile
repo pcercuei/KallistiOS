@@ -46,7 +46,7 @@ RUN mkdir -p /opt/toolchains/dc
 COPY . /opt/toolchains/dc/kos
 
 RUN cd /opt/toolchains/dc/kos/utils/dc-chain \
-	&& make build platform=$platform toolchain_profile=$profile CC=$CC CXX=$CXX \
+	&& make build platform=$platform toolchain_profile=$profile verbose=0 CC=$CC CXX=$CXX \
 	&& rm -rf /opt/toolchains/dc/kos
 
 # Stage 2
