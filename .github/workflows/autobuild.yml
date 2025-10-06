@@ -35,14 +35,12 @@ jobs:
       fail-fast: false
       matrix:
         toolchain: ${{ fromJSON(needs.matrix.outputs.matrix) }}
-        os: [linux, mingw]
 
     runs-on: ubuntu-latest
 
     env:
       platform: ${{ fromJSON(matrix.toolchain).platform }}
       profile: ${{ fromJSON(matrix.toolchain).profile }}
-      os: ${{ matrix.os }}
 
     steps:
     - uses: actions/checkout@v3
@@ -57,20 +55,13 @@ jobs:
             - .github/workflows/list-profiles.sh
             - utils/dc-chain/**
 
-    - name: setup-mingw-w64
-      if: matrix.os == 'mingw'
-      run: |
-        echo "MINGW_PREFIX=x86_64-w64-mingw32-" >> $GITHUB_ENV
-
     - name: build-toolchain
       if: steps.filter.outputs.paths == 'true'
       run: >
         sudo docker build
-        -t $dockerhub_user/$platform-toolchain-$os:$profile
+        -t $dockerhub_user/$platform-toolchain:$profile
         --build-arg platform=$platform
         --build-arg profile=$profile
-        --build-arg CC=${{ env.MINGW_PREFIX }}gcc
-        --build-arg CXX=${{ env.MINGW_PREFIX }}g++
         -f $GITHUB_WORKSPACE/utils/dc-chain/docker/Dockerfile
         $GITHUB_WORKSPACE
 
@@ -78,7 +69,7 @@ jobs:
       if: steps.filter.outputs.paths == 'true' && github.event_name == 'push'
       run: |
         echo "${{ secrets.DOCKER_HUB_KEY }}" | sudo docker login -u $dockerhub_user --password-stdin
-        sudo docker push $dockerhub_user/$platform-toolchain-$os:$profile
+        sudo docker push $dockerhub_user/$platform-toolchain:$profile
         sudo docker logout
 
     - name: build-kos-check
@@ -97,7 +88,7 @@ jobs:
 
         sudo docker run --rm --name kallistios
         -v $GITHUB_WORKSPACE:/workspace -w /workspace
-        $dockerhub_user/$platform-toolchain-$os:$profile
+        $dockerhub_user/$platform-toolchain:$profile
         .github/build-kos.sh $platform
 
         sudo docker logout
