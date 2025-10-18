@@ -44,17 +44,25 @@ jobs:
     - uses: actions/checkout@v3
 
     - uses: dorny/paths-filter@v3
-      id: filter
+      id: cifilter
       with:
         filters: |
           paths:
             - .github/workflows/autobuild.yml
             - .github/workflows/build-kos.sh
             - .github/workflows/list-profiles.sh
+
+    - uses: dorny/paths-filter@v3
+      id: filter
+      with:
+        predicate-quantifier: 'every'
+        filters: |
+          paths:
             - utils/dc-chain/**
+            - '!**/*.md'
 
     - name: build-toolchain
-      if: steps.filter.outputs.paths == 'true'
+      if: steps.cifilter.outputs.paths == 'true' || steps.filter.outputs.paths == 'true'
       run: >
         sudo docker build
         -t $dockerhub_user/$platform-toolchain:$profile
@@ -64,7 +72,7 @@ jobs:
         $GITHUB_WORKSPACE
 
     - name: publish
-      if: steps.filter.outputs.paths == 'true' && github.event_name == 'push'
+      if: (steps.cifilter.outputs.paths == 'true' || steps.filter.outputs.paths == 'true') && github.event_name == 'push'
       run: |
         echo "${{ secrets.DOCKER_HUB_KEY }}" | sudo docker login -u $dockerhub_user --password-stdin
         sudo docker push $dockerhub_user/$platform-toolchain:$profile
