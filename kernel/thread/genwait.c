@@ -32,6 +32,8 @@
 static TAILQ_HEAD(slpquehead, kthread) slpque[TABLESIZE];
 #define LOOKUP(x)   (((uintptr_t)(x) >> 8) & (TABLESIZE - 1))
 
+static struct ktqueue poll_queue;
+
 /* Timed event queue. Anything that isn't ready to run yet, but will be
    ready to run at a later time will be placed here. Note that this doesn't
    deal with pre-emptive timeslice context switching, only things that are
@@ -69,7 +71,7 @@ static kthread_t *tq_next(void) {
 }
 
 int genwait_wait(void *obj, const char *mesg, unsigned int timeout,
-                 void (*callback)(void *)) {
+                 int (*poll_cb)(void *)) {
     kthread_t   *me, *t;
 
     assert(!irq_inside_int());
@@ -85,24 +87,29 @@ int genwait_wait(void *obj, const char *mesg, unsigned int timeout,
     if(timeout > 0) {
         /* If we have a timeout, insert us on the timer queue. */
         me->wait_timeout = timer_ms_gettime64() + timeout;
-        tq_insert(me);
+        if(poll_cb)
+            tq_insert(me);
     }
     else
         me->wait_timeout = 0;
 
-    me->wait_callback = callback;
+    me->poll_cb = poll_cb;
 
-    /* Go through and find where to insert */
-    TAILQ_FOREACH(t, &slpque[LOOKUP(obj)], thdq) {
-        if(me->prio < t->prio) {
-            TAILQ_INSERT_BEFORE(t, me, thdq);
-            break;
+    if(poll_cb) {
+        TAILQ_INSERT_TAIL(&poll_queue, me, thdq);
+    } else {
+        /* Go through and find where to insert */
+        TAILQ_FOREACH(t, &slpque[LOOKUP(obj)], thdq) {
+            if(me->prio < t->prio) {
+                TAILQ_INSERT_BEFORE(t, me, thdq);
+                break;
+            }
         }
-    }
 
-    /* We got to the end of the list, so insert at end */
-    if(!t)
-        TAILQ_INSERT_TAIL(&slpque[LOOKUP(obj)], me, thdq);
+        /* We got to the end of the list, so insert at end */
+        if(!t)
+            TAILQ_INSERT_TAIL(&slpque[LOOKUP(obj)], me, thdq);
+    }
 
     /* Block us until we're signaled */
     return thd_block_now(&me->context);
@@ -122,7 +129,7 @@ static void __nonnull_all genwait_unqueue(kthread_t *thd) {
         thd->wait_obj = NULL;
         thd->wait_msg = NULL;
         thd->wait_timeout = 0;
-        thd->wait_callback = NULL;
+        thd->poll_cb = NULL;
 
         /* Make it runnable again */
         thd->state = STATE_READY;
@@ -195,7 +202,8 @@ int genwait_wake_thd(const void *obj, kthread_t *thd, int err) {
 }
 
 void genwait_check_timeouts(uint64_t tm) {
-    kthread_t   *t;
+    kthread_t   *t, *nt;
+    int ret;
 
     t = tq_next();
 
@@ -209,15 +217,23 @@ void genwait_check_timeouts(uint64_t tm) {
         t->thd_errno = EAGAIN;  /* This is fairly close */
         CONTEXT_RET(t->context) = -1;
 
-        /* If there's a callback, then call it */
-        if(t->wait_callback)
-            t->wait_callback(t->wait_obj);
-
         /* Re-activate it */
         genwait_unqueue(t);
 
         /* Get the next one */
         t = tq_next();
+    }
+
+    TAILQ_FOREACH_SAFE(t, &poll_queue, thdq, nt) {
+        if(t->wait_timeout && t->wait_timeout <= tm)
+            ret = -1;
+        else
+            ret = t->poll_cb(t->wait_obj);
+
+        if(ret) {
+            TAILQ_REMOVE(&poll_queue, t, thdq);
+            CONTEXT_RET(t->context) = ret;
+        }
     }
 }
 
@@ -239,6 +255,7 @@ int genwait_init(void) {
         TAILQ_INIT(&slpque[i]);
 
     TAILQ_INIT(&timer_queue);
+    TAILQ_INIT(&poll_queue);
     return 0;
 }
 

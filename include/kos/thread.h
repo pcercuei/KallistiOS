@@ -201,14 +201,15 @@ typedef __attribute__((aligned(32))) struct kthread {
     */
     const char *wait_msg;
 
-    /** \brief  Wait timeout callback.
+    /** \brief  Poll callback.
 
-        If the genwait times out while waiting, this function will be called.
-        This allows hooks for things like fixing up semaphore count values, etc.
+        If set by genwait_wait(), this function will be called (with wait_obj as
+        its argument) until it returns non-zero, after which the calling thread
+        is awaken.
 
         \param  obj         The object that we were waiting on.
     */
-    void (*wait_callback)(void *obj);
+    int (*poll_cb)(void *obj);
 
     /** \brief  Next scheduled time.
 

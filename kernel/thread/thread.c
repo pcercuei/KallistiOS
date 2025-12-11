@@ -870,6 +870,10 @@ int thd_detach(kthread_t *thd) {
     return rv;
 }
 
+int thd_poll(int (*cb)(void *), void *data, unsigned long timeout_ms) {
+    return genwait_wait(data, "polling", timeout_ms, cb);
+}
+
 
 /*****************************************************************************/
 /* Retrieve / set thread label */
