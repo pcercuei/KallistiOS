@@ -742,6 +742,15 @@ static void thd_timer_hnd(irq_context_t *context) {
     timer_primary_wakeup(thd_sched_ms);
 }
 
+static void thd_scheduler_hnd(irq_t code, irq_context_t *context, void *d) {
+    (void)code;
+    (void)context;
+    (void)d;
+
+    thd_schedule(false);
+    timer_primary_wakeup(thd_sched_ms);
+}
+
 /*****************************************************************************/
 
 /* Thread blocking based sleeping; this is the preferred way to
@@ -1040,8 +1049,9 @@ int thd_init(void) {
     /* Initialize thread sync primitives */
     genwait_init();
 
-    /* Setup our pre-emption handler */
+    /* Setup our pre-emption handlers */
     timer_primary_set_callback(thd_timer_hnd);
+    irq_set_handler(IRQ_SCHEDULER, thd_scheduler_hnd, NULL);
 
     /* Schedule our first wakeup */
     timer_primary_wakeup(thd_sched_ms);

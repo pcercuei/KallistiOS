@@ -42,6 +42,7 @@ __BEGIN_DECLS
 #include <kos/tls.h>
 #include <arch/irq.h>
 #include <arch/types.h>
+#include <arch/thread.h>
 
 #include <sys/queue.h>
 #include <sys/reent.h>
@@ -329,7 +330,11 @@ extern kthread_t *thd_current;
 
     \return                 Whatever the unblocker deems necessary to return.
 */
-int thd_block_now(irq_context_t *mycxt);
+static inline int thd_block_now(irq_context_t *mycxt) {
+    (void)mycxt;
+
+    return arch_thd_block_now();
+}
 
 /** \brief   Find a new thread to swap in.
 
