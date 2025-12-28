@@ -232,6 +232,8 @@ enum irq_exception
 
 #define IRQ_TRAP_CODE(code) (irq_t)(EXC_TRAP + (code))
 
+#define IRQ_SCHEDULER IRQ_TRAP_CODE(0xff)
+
 extern int inside_int;
 static inline int arch_irq_inside_int(void) {
     return inside_int;
