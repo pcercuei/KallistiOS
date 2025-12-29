@@ -21,7 +21,6 @@
 	.globl		_irq_srt_addr
 	.globl		_irq_handle_exception
 	.globl		_irq_save_regs
-	.globl		_irq_force_return
 
 ! Static kernel-mode stack; we can get away with this because in our
 ! tiny microkernel, only one thread will ever actually be sitting inside
@@ -123,25 +122,8 @@ _irq_save_regs:
 	mov.l		hdl_except,r2	! Call handle_exception
 	jsr		@r2
 	nop
-	bra		_save_regs_finish
-	nop
-
-	.align 2
-irqd_and:
-	.long	0xefffff0f
-irqd_or:
-	.long	0x000000f0
-
-! irq_force_return() jumps here; make sure we're in register
-! bank 1 (as opposed to 0)
-_irq_force_return:
-	mov.l	_irqfr_or,r1
-	stc	sr,r0
-	or	r1,r0
-	ldc	r0,sr
 
 ! Now restore all the registers and jump back to the thread
-_save_regs_finish:
 	mov.l	_irq_srt_addr, r1	! Get register store address
 	mov	#0x10,r2		! Set bit 20 to r2
 	ldc.l	@r1+,spc		! restore SPC 0x00
@@ -200,6 +182,10 @@ _save_regs_finish:
 	nop
 
 	.align 2
+irqd_and:
+	.long	0xefffff0f
+irqd_or:
+	.long	0x000000f0
 _irqfr_or:
 	.long	0x20000000
 stkaddr:
@@ -210,97 +196,6 @@ _irq_srt_addr:
 			! context switch.
 hdl_except:
 	.long	_irq_handle_exception
-
-
-! Special case handler for TLB miss exceptions. There are two reasons
-! why we'd want to do this and complicate things. The first is speed --
-! if TLB misses happen often (which is likely if we're using the MMU
-! allocator) then saving the full processor context and switching
-! back is going to be a major drain on the dcache and also just
-! general processor time. Second reason is that it allows us to process
-! these inside an IRQ/exception handler without having to have nestable
-! exceptions just yet. That's a whole 'nother egg I don't want to
-! break just yet.
-!
-! !!NOTE!! This is highly dependent on the structure of the MMU tables
-! in mmu.h and the MMU code in mmu.c. If either of those change, this will
-! likely need to change as well.
-	.text
-	.align 2
-tlb_miss_hnd:
-	! Get the exception event code; we want to handle only
-	! 0x0040 (ITLB_MISS/DTLB_MISS_READ) or 0x0060 (DTLB_MISS_WRITE)
-	mov	#-1,r3		! 0xff000024 (EXPEVT) -> r3
-	shll16	r3
-	shll8	r3
-	add	#0x24,r3
-	mov.l	@r3,r0		! Get EXPEVT
-
-	mov	#0x40,r1	! 0x0040 -> r1
-
-	cmp/eq	r0,r1
-	bt.s	tmh_doit
-	mov	#0x60,r1
-
-	cmp/eq	r0,r1
-	bt	tmh_doit
-
-	! It's not one of the MISS codes, just send it on to the normal
-	! irq processing.
-	bra	_irq_save_regs
-	mov	#2,r4
-
-tmh_doit:
-	! So it's an ITLB or DTLB_MISS code. Look at the MMU module's
-	! shortcut flag. If that's set, it's safe to pass on processing
-	! directly to the mapping function.
-
-	! Check the shortcut flag
-	mov.l	tmh_shortcut_addr,r0
-	mov.l	@r0,r0
-	cmp/pz	r0
-	bt	tmh_clear
-	bra	_irq_save_regs
-	mov	#2,r4
-
-tmh_clear:
-	! Coast is clear -- setup the args and call the C function. Regs R0-R7
-	! are volatile on SH-4 anyway, and R8-R14 will be saved if needed
-	! onto our temp stack. So all we need to worry about here, at least
-	! for this small C call, is the stack. To facilitate the stack, we'll
-	! save R15 and setup a small temp stack.
-	mov.l	tmh_stack_save_addr,r0		! Setup stack
-	mov.l	r15,@r0
-	mov.l	tmh_temp_stack_addr,r15
-
-	mov	#0,r4				! Call gen_miss
-	mov	#0,r5
-	mov.l	tmh_gen_miss_addr,r0
-	jsr	@r0
-	mov	#0,r6
-
-	mov.l	tmh_stack_save,r15		! Fix stack back
-
-	! Return back from the exception
-	rte
-	nop
-
-	.align	2
-tmh_shortcut_addr:
-	.long	_mmu_shortcut_ok
-tmh_stack_save_addr:
-	.long	tmh_stack_save
-tmh_stack_save:
-	.long	0
-tmh_temp_stack_addr:
-	.long	tmh_temp_stack
-tmh_gen_miss_addr:
-	.long	_mmu_gen_tlb_miss
-
-	.data
-	.space	256
-tmh_temp_stack:
-
 
 ! The SH4 has very odd exception handling. Instead of having a vector
 ! table like a sensible processor, it has a vector code block. *sigh*
@@ -325,8 +220,6 @@ _vma_table_100:		! General exceptions
 
 _vma_table_400:		! TLB miss exceptions (MMU)
 	nop
-!	bra	tlb_miss_hnd
-!	nop
 	bra	_irq_save_regs
 	mov	#2,r4			! Set exception code
 
