@@ -21,7 +21,6 @@
 	.globl		_irq_srt_addr
 	.globl		_irq_handle_exception
 	.globl		_irq_save_regs
-	.globl		_irq_force_return
 
 ! Static kernel-mode stack; we can get away with this because in our
 ! tiny microkernel, only one thread will ever actually be sitting inside
@@ -123,25 +122,8 @@ _irq_save_regs:
 	mov.l		hdl_except,r2	! Call handle_exception
 	jsr		@r2
 	nop
-	bra		_save_regs_finish
-	nop
-
-	.align 2
-irqd_and:
-	.long	0xefffff0f
-irqd_or:
-	.long	0x000000f0
-
-! irq_force_return() jumps here; make sure we're in register
-! bank 1 (as opposed to 0)
-_irq_force_return:
-	mov.l	_irqfr_or,r1
-	stc	sr,r0
-	or	r1,r0
-	ldc	r0,sr
 
 ! Now restore all the registers and jump back to the thread
-_save_regs_finish:
 	mov.l	_irq_srt_addr, r1	! Get register store address
 	mov	#0x10,r2		! Set bit 20 to r2
 	ldc.l	@r1+,spc		! restore SPC 0x00
@@ -200,6 +182,10 @@ _save_regs_finish:
 	nop
 
 	.align 2
+irqd_and:
+	.long	0xefffff0f
+irqd_or:
+	.long	0x000000f0
 _irqfr_or:
 	.long	0x20000000
 stkaddr:
