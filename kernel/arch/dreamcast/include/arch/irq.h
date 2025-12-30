@@ -95,15 +95,15 @@ struct __attribute__((aligned(32))) irq_context {
     uint32_t  pc;         /**< Program counter */
     uint32_t  pr;         /**< Procedure register (aka return address) */
     uint32_t  gbr;        /**< Global base register (TLS segment ptr) */
-    uint32_t  vbr;        /**< Vector base register */
     uint32_t  mach;       /**< Multiply-and-accumulate register (high) */
     uint32_t  macl;       /**< Multiply-and-accumulate register (low) */
     uint32_t  sr;         /**< Status register */
     uint32_t  fpul;       /**< Floating-point communication register */
+    uint32_t  fpscr;      /**< Floating-point status/control register */
     uint32_t  fr[16];     /**< Primary floating point registers */
     uint32_t  frbank[16]; /**< Secondary floating point registers */
     uint32_t  r[16];      /**< 16 general purpose (integer) registers */
-    uint32_t  fpscr;      /**< Floating-point status/control register */
+    uint32_t  vbr;        /**< Vector base register */
 };
 
 /** \name Register Accessors

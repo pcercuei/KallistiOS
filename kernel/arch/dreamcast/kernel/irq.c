@@ -314,6 +314,7 @@ void arch_irq_create_context(irq_context_t *context,
     context->sr = 0x40000000;   /* note: need to handle IMASK */
     context->r[15] = stack_pointer;
     context->r[14] = 0xffffffff;
+    context->vbr = (uint32_t)irq_vma_table;
 
     /* Copy up to four args */
     context->r[4] = args[0];
