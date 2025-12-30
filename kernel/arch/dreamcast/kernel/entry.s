@@ -38,13 +38,9 @@ _irq_save_regs:
 ! On the SH4, an exception triggers a toggle of RB in SR. So all
 ! the R0-R7 registers were convienently saved for us.
 	mov.l		_irq_srt_addr,r0	! Grab the location of the reg store
-	add		#0x72,r0	! Start at the top of the BANK regs
-	add		#0x72,r0
-	sts.l		fpscr,@-r0	! save FPSCR 0xe0
-
-	mov		r0,r1
-	add		#-4,r1
 	mov		#0x7,r2
+
+	sts		fpscr,r3
 
 1:
 	! Write a bogus value (r0) at each (i*0x20) offset of the irq context
@@ -52,10 +48,10 @@ _irq_save_regs:
 	! blocks that covers the whole memory area, without fetching data
 	! from RAM, which means that the stores will then be as fast as they
 	! can be.
-	movca.l		r0,@r1
+	movca.l		r0,@r0
 	dt		r2
 	bf/s		1b
-	add		#-0x20,r1
+	add		#0x20,r0
 
 	mov.l		r15,@-r0	! save R15   0xdc
 	mov		#0x30,r2	! Set bits 20/21 to r2
@@ -100,11 +96,11 @@ _irq_save_regs:
 	! Setup our kernel-mode stack
 	mov.l		stkaddr,r15
 
-	sts.l		fpul,@-r0	! save FPUL  0x1c
+	mov.l		r3,@-r0		! save FPSCR	0x1c
+	sts.l		fpul,@-r0	! save FPUL  0x18
 	stc.l		ssr,@-r0	! save SSR
 	sts.l		macl,@-r0	! save MACL
 	sts.l		mach,@-r0	! save MACH
-	stc.l		vbr,@-r0	! save VBR
 	stc.l		gbr,@-r0	! save GBR
 	sts.l		pr,@-r0		! save PR
 	stc.l		spc,@-r0	! save PC    0x00
@@ -129,12 +125,11 @@ _irq_save_regs:
 	ldc.l	@r1+,spc		! restore SPC 0x00
 	lds.l	@r1+,pr			! restore PR
 	ldc.l	@r1+,gbr		! restore GBR
-!	ldc.l	@r1+,vbr		! restore VBR (don't play with VBR)
-	add	#4,r1			!
 	lds.l	@r1+,mach		! restore MACH
 	lds.l	@r1+,macl		! restore MACL
-	ldc.l	@r1+,ssr		! restore SSR  0x18
-	lds.l	@r1+,fpul		! restore FPUL 0x1c
+	ldc.l	@r1+,ssr		! restore SSR
+	lds.l	@r1+,fpul		! restore FPUL 0x18
+	mov.l	@r1+,r3			! load FPSCR 0x1c
 	shll16	r2
 	lds	r2,fpscr		! Reset FPSCR, 64-bit I/O
 
@@ -174,7 +169,7 @@ _irq_save_regs:
 	mov.l	@r1+,r14		! restore R14
 	mov.l	@r1+,r15		! restore R15   0xdc
 
-	lds.l	@r1+,fpscr		! restore FPSCR 0xe0
+	lds	r3,fpscr		! restore FPSCR
 
 	mov	#2,r0
 
