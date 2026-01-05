@@ -149,9 +149,12 @@ SECTIONS
     . = ALIGN(4);
     __tdata_align = .;
     LONG (ALIGNOF(.tdata));
-    . = ALIGN(4);
+    __tdata_size = .;
+    LONG (SIZEOF(.tdata));
     __tbss_align = .;
     LONG (ALIGNOF(.tbss));
+    __tbss_size = .;
+    LONG (SIZEOF(.tbss));
     . = ALIGN(4);
   }
   .rodata1        : { *(.rodata1) }
@@ -175,13 +178,12 @@ SECTIONS
     __tdata_start = .;
     *(.tdata .tdata.* .gnu.linkonce.td.*) 
   }
-  __tdata_size = SIZEOF(.tdata);
   .tbss	(NOLOAD)	  : 
   { 
+    __tbss_start = .;
     *(.tbss .tbss.* .gnu.linkonce.tb.*) 
     *(.tcommon)
   }
-  __tbss_size = SIZEOF(.tbss);
   .preinit_array     :
   {
     PROVIDE_HIDDEN (__preinit_array_start = .);
