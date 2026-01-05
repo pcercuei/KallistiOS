@@ -22,6 +22,7 @@
 
 __BEGIN_DECLS
 
+#include <stdint.h>
 #include <sys/queue.h>
 
 /** \brief  Thread-local storage key type. */
@@ -49,10 +50,32 @@ typedef struct kthread_tls_kv {
     void (*destructor)(void *);
 } kthread_tls_kv_t;
 
+/** \brief  Thread Control Block Header
+
+    Header preceding the static TLS data segments as defined by
+    the SH-ELF TLS ABI (version 1). This is what the thread pointer
+    (GBR) points to for compiler access to thread-local data.
+*/
+typedef struct tcbhead {
+    void *dtv;               /**< \brief Dynamic TLS vector (unused) */
+    uintptr_t pointer_guard; /**< \brief Pointer guard (unused) */
+} tcbhead_t;
+
 /** \cond */
 /* TLS Key-Value pair list type. */
 LIST_HEAD(kthread_tls_kv_list, kthread_tls_kv);
 /** \endcond */
+
+/** \brief  Create and initialize the static TLS segment for a thread
+
+    This function will create and initialize the static TLS segment for a
+    thread, composed of a Thread Control Block (TCB), followed by .TDATA,
+    followed by .TBSS, very carefully ensuring alignment of each subchunk.
+
+    \return An allocated tcbhead_t object, that can later be discarded with
+    free().
+*/
+tcbhead_t *kthread_tls_alloc_tcbhead(void);
 
 /** \brief  Create a new thread-local storage key.
 

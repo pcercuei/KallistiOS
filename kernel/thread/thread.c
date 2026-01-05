@@ -443,11 +443,16 @@ kthread_t *thd_create_ex(const kthread_attr_t *restrict attr,
             /* Create static TLS data if the thread hasn't disabled it. */
             if(real_attr.disable_tls) {
                 nt->flags |= THD_DISABLE_TLS;
-            } else if(!arch_tls_setup_data(nt)) {
-                if(nt->flags & THD_OWNS_STACK)
-                    free(nt->stack);
-                free(nt);
-                return NULL;
+            } else {
+                nt->tls_hnd = kthread_tls_alloc_tcbhead();
+                if(!nt->tls_hnd) {
+                    if(nt->flags & THD_OWNS_STACK)
+                        free(nt->stack);
+                    free(nt);
+                    return NULL;
+                }
+
+                arch_tls_setup(nt);
             }
 
             nt->tid = tid;
@@ -540,7 +545,7 @@ int thd_destroy(kthread_t *thd) {
 
     /* Free static TLS segment (if it hasn't been disabled for the thread). */
     if(!(thd->flags & THD_DISABLE_TLS))
-        arch_tls_destroy_data(thd);
+        free(thd->tls_hnd);
 
     /* Free the thread */
     free(thd);

@@ -39,25 +39,13 @@ void arch_tls_init(void);
 
 /** \brief  Set up tls data for a new kthread.
 
-    This function allocates the memory for a kthread's TLS,
-    copies static data from the executable, and sets the
-    kthread's IRQ context to match.
+    This function will do the arch-specific initialization of a kthread's TLS.
 
     It will be called by `thd_create_ex`
 
     \param  thd             The thread to setup tls data for.
 */
-bool arch_tls_setup_data(kthread_t *thd);
-
-/** \brief  Destroy tls data for an old kthread.
-
-    This function undoes arch_tls_setup_data.
-
-    It will be called by `thd_destroy`
-
-    \param  thd             The thread to destroy tls data for.
-*/
-void arch_tls_destroy_data(kthread_t *thd);
+void arch_tls_setup(kthread_t *thd);
 
 __END_DECLS
 

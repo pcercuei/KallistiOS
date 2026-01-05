@@ -255,7 +255,7 @@ typedef struct __attribute__((aligned(32))) kthread {
     struct kthread_tls_kv_list tls_list;
 
     /** \brief Compiler-level thread-local storage. */
-    void *tls_hnd;
+    tcbhead_t *tls_hnd;
 
     /** \brief  Return value of the thread function.
 
