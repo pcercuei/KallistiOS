@@ -108,6 +108,7 @@ _irq_save_regs:
 	! Before we enter the main C code again, re-enable exceptions
 	! (but not interrupts) so we can still debug inside handlers.
 	mov.l		irqd_and,r1
+	mov		r0,r5
 	mov.l		irqd_or,r2
 	stc  		sr,r0
 	and  		r0,r1
