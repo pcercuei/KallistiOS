@@ -187,20 +187,10 @@ void irq_dump_regs(int code, irq_t evt) {
    types of interrupts. NOTE: We are running on the stack of the process
    that was interrupted! */
 volatile uint32_t jiffies = 0;
-void irq_handle_exception(int code) {
+irq_context_t *irq_handle_exception(int code, irq_context_t *cxt) {
     const struct irq_cb *hnd;
     uint32_t evt = 0;
     int handled = 0;
-
-    if(__is_defined(__SH_ATOMIC_MODEL_SOFT_GUSA__)
-       && __predict_false((int32_t)irq_srt_addr->r[15] >= -128
-                     && irq_srt_addr->pc != irq_srt_addr->r[0])) {
-        /* The stack pointer has been altered: it means we are in the middle of
-           an atomic section, and we need to roll-back.
-           The r0 register contains the address of the end of the section,
-           and the stack pointer contains the negated section size. */
-        irq_srt_addr->pc = irq_srt_addr->r[0] + irq_srt_addr->r[15];
-    }
 
     switch(code) {
         /* If it's a code 3, grab the event from intevt. */
@@ -224,7 +214,7 @@ void irq_handle_exception(int code) {
     if(inside_int) {
         hnd = &irq_handlers[EXC_DOUBLE_FAULT >> 5];
         if(hnd->hdl != NULL)
-            hnd->hdl(EXC_DOUBLE_FAULT, irq_srt_addr, hnd->data);
+            hnd->hdl(EXC_DOUBLE_FAULT, cxt, hnd->data);
         else
             irq_dump_regs(code, evt);
 
@@ -239,7 +229,7 @@ void irq_handle_exception(int code) {
 
     /* If there's a global handler, call it */
     if(global_irq_handler.hdl) {
-        global_irq_handler.hdl(evt, irq_srt_addr, global_irq_handler.data);
+        global_irq_handler.hdl(evt, cxt, global_irq_handler.data);
         handled = 1;
     }
 
@@ -247,7 +237,7 @@ void irq_handle_exception(int code) {
     {
         hnd = &irq_handlers[evt >> 5];
         if(hnd->hdl != NULL) {
-            hnd->hdl(evt, irq_srt_addr, hnd->data);
+            hnd->hdl(evt, cxt, hnd->data);
             handled = 1;
         }
     }
@@ -255,7 +245,7 @@ void irq_handle_exception(int code) {
     if(!handled) {
         hnd = &irq_handlers[EXC_UNHANDLED_EXC >> 5];
         if(hnd->hdl != NULL)
-            hnd->hdl(evt, irq_srt_addr, hnd->data);
+            hnd->hdl(evt, cxt, hnd->data);
         else
             irq_dump_regs(code, evt);
 
@@ -264,6 +254,19 @@ void irq_handle_exception(int code) {
 
     irq_disable();
     inside_int = 0;
+
+    if(__is_defined(__SH_ATOMIC_MODEL_SOFT_GUSA__)
+       && irq_srt_addr != cxt
+       && __predict_false((int32_t)irq_srt_addr->r[15] >= -128
+                     && irq_srt_addr->pc != irq_srt_addr->r[0])) {
+        /* The stack pointer has been altered: it means we are in the middle of
+           an atomic section, and we need to roll-back.
+           The r0 register contains the address of the end of the section,
+           and the stack pointer contains the negated section size. */
+        irq_srt_addr->pc = irq_srt_addr->r[0] + irq_srt_addr->r[15];
+    }
+
+    return cxt;
 }
 
 static void irq_handle_trapa(irq_t code, irq_context_t *context, void *data) {
