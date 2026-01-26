@@ -99,13 +99,26 @@ static dirent_t *fs_root_readdir(fs_hnd_t *handle) {
 /* This version of open deals with raw handles only. This is below the level
    of file descriptors. It is used by the standard fs_open below. The
    returned handle will have no references attached to it. */
-static fs_hnd_t * fs_hnd_open(const char *fn, int mode) {
+static fs_hnd_t * fs_hnd_open(file_t fd, const char *fn, int mode) {
     nmmgr_handler_t *nmhnd;
     vfs_handler_t   *cur;
     const char  *cname;
     void        *h;
     fs_hnd_t    *hnd;
     char        rfn[PATH_MAX];
+    char        *endch;
+
+    if(fd != FILEHND_INVALID && fn[0] != '/') {
+        cur = fs_get_handler(fd);
+        if(!cur)
+            return NULL;
+
+        endch = stpcpy(rfn, cur->nmmgr.pathname);
+        *endch++ = '/';
+        strcpy(endch, fn);
+
+        fn = rfn;
+    }
 
     if(!fs_normalize_path(fn, rfn))
         return NULL;
@@ -228,19 +241,23 @@ int fs_fdtbl_destroy(void) {
     return 0;
 }
 
-/* Attempt to open a file, given a path name. Follows the process described
-   in the above comments. */
-file_t fs_open(const char *fn, int mode) {
+file_t fs_openat(file_t fd, const char *fn, int mode) {
     fs_hnd_t * hnd;
 
     /* First try to open the file handle */
-    hnd = fs_hnd_open(fn, mode);
+    hnd = fs_hnd_open(fd, fn, mode);
 
     if(!hnd)
         return -1;
 
     /* Ok, that succeeded -- now look for a file descriptor. */
     return fs_hnd_assign(hnd);
+}
+
+/* Attempt to open a file, given a path name. Follows the process described
+   in the above comments. */
+file_t fs_open(const char *fn, int mode) {
+    return fs_openat(FILEHND_INVALID, fn, mode);
 }
 
 /* See header for comments */

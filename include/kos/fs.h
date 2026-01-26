@@ -259,6 +259,8 @@ extern struct fs_hnd *fd_table[FD_SETSIZE];
 */
 file_t fs_open(const char *fn, int mode);
 
+file_t fs_openat(file_t fd, const char *fn, int mode);
+
 /** \brief   Close an opened file.
 
     This function closes the specified file descriptor, releasing all resources
