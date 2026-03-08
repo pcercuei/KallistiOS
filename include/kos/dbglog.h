@@ -23,6 +23,12 @@
 #include <kos/cdefs.h>
 __BEGIN_DECLS
 
+#ifdef __ARMEL__
+#define DBGLOG_PREFIX "ARM: "
+#else
+#define DBGLOG_PREFIX
+#endif
+
 #include <kos/opts.h>
 #include <stdio.h>
 
@@ -46,7 +52,7 @@ __BEGIN_DECLS
 do { \
     int __dbglog_lvl = (lvl); \
     if(__dbglog_lvl <= DBGLOG_LEVEL_SUPPORT && __dbglog_lvl <= dbglog_level) \
-        printf(__VA_ARGS__); \
+        printf(DBGLOG_PREFIX __VA_ARGS__); \
 } while(0)
 
 /** \defgroup   dbglog_levels   Log Levels
