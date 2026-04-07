@@ -237,9 +237,6 @@ int snd_init(void) {
 
         /* Enable IRQs from the ARM */
         asic_evt_enable(ASIC_EVT_SPU_IRQ, ASIC_IRQ9);
-
-        /* Initialize the RAM allocator */
-        snd_mem_init(AICA_RAM_START);
     }
 
     initted = 1;
@@ -255,7 +252,6 @@ void snd_shutdown(void) {
         asic_evt_remove_handler(ASIC_EVT_SPU_IRQ);
         asic_evt_disable(ASIC_EVT_SPU_IRQ, ASIC_IRQ9);
 
-        snd_mem_shutdown();
         initted = 0;
     }
 }

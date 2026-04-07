@@ -78,7 +78,12 @@ uint32_t snd_mem_available(void);
     \param  reserve         The amount of memory to reserve as a base.
     \retval 0               On success (no failure conditions defined).
 */
-int snd_mem_init(uint32_t reserve);
+__depr("snd_mem_init() is useless and can be removed.")
+static inline int snd_mem_init(uint32_t reserve) {
+    (void)reserve;
+
+    return 0;
+}
 
 /** \brief  Shutdown the SPU RAM allocator.
 
@@ -86,7 +91,9 @@ int snd_mem_init(uint32_t reserve);
     as doing so will cause problems if you try to allocate SPU memory without
     calling snd_mem_init() afterwards.
 */
-void snd_mem_shutdown(void);
+__depr("snd_mem_shutdown() is useless and can be removed.")
+static inline void snd_mem_shutdown(void) {
+}
 
 /** \brief  Initialize the sound system.
 
