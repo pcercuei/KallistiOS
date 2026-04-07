@@ -16,6 +16,7 @@
 #include <stdint.h>
 
 typedef enum aica_queue_cmd_code {
+    /* VFS functions */
     AICA_CMD_OPENFILE,
     AICA_CMD_CLOSEFILE,
     AICA_CMD_READFILE,
@@ -24,7 +25,21 @@ typedef enum aica_queue_cmd_code {
     AICA_CMD_TELLFILE,
     AICA_CMD_TOTALFILE,
     AICA_CMD_READDIR,
+
+    /* Debug functions */
     AICA_CMD_PUTS,
+
+    /* Memory management functions */
+    AICA_CMD_MEMALIGN,
+    AICA_CMD_REALLOC,
+    AICA_CMD_FREE,
+
+    /* Channel related functions */
+    AICA_CMD_CHN_REQUEST,
+    AICA_CMD_CHN_RELEASE,
+    AICA_CMD_UPDATE,
+    AICA_CMD_START,
+    AICA_CMD_STOP,
 } aica_queue_cmd_code_t;
 
 /** \brief AICA firmware header

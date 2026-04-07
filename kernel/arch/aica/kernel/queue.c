@@ -16,9 +16,10 @@
 #include <aica/queue.h>
 #include <aica/registers.h>
 
-#include <stdbool.h>
 #include <stdalign.h>
 #include <stdatomic.h>
+#include <stdbool.h>
+#include <stdlib.h>
 #include <string.h>
 
 alignas(32)
@@ -64,8 +65,75 @@ static void aica_notify_queue(irq_t code, irq_context_t *context, void *d) {
     rpc_process_inbound(d);
 }
 
+static int aica_memalign(const rpc_cmd_t *cmd, void *cb_data) {
+    (void)cb_data;
+
+    return (int)aligned_alloc(cmd->params[0], cmd->params[1]);
+}
+
+static int aica_realloc(const rpc_cmd_t *cmd, void *cb_data) {
+    (void)cb_data;
+
+    return (int)realloc((void *)cmd->params[0], cmd->params[1]);
+}
+
+static int aica_free(const rpc_cmd_t *cmd, void *cb_data) {
+    (void)cb_data;
+
+    free((void *)cmd->params[0]);
+    return 0;
+}
+
+static int aica_chn_request(const rpc_cmd_t *cmd, void *cb_data) {
+    (void)cb_data;
+    (void)cmd;
+
+    return aica_reserve_channel();
+}
+
+static int aica_chn_release(const rpc_cmd_t *cmd, void *cb_data) {
+    (void)cb_data;
+
+    aica_unreserve_channel(cmd->params[0]);
+    return 0;
+}
+
+static inline uint64_t cmd_get_mask(const rpc_cmd_t *cmd) {
+    return ((uint64_t)cmd->params[1] << 32) | cmd->params[0];
+}
+
+static int aica_chn_update(const rpc_cmd_t *cmd, void *cb_data) {
+    (void)cb_data;
+
+    aica_update_channels(cmd_get_mask(cmd));
+    return 0;
+}
+
+static int aica_chn_start(const rpc_cmd_t *cmd, void *cb_data) {
+    (void)cb_data;
+
+    aica_start_channels(cmd_get_mask(cmd));
+    return 0;
+}
+
+static int aica_chn_stop(const rpc_cmd_t *cmd, void *cb_data) {
+    (void)cb_data;
+
+    aica_stop_channels(cmd_get_mask(cmd));
+    return 0;
+}
+
 void queue_init(void) {
     rpc_init(&aica_rpc);
+
+    rpc_register(AICA_CMD_MEMALIGN, aica_memalign, NULL);
+    rpc_register(AICA_CMD_REALLOC, aica_realloc, NULL);
+    rpc_register(AICA_CMD_FREE, aica_free, NULL);
+    rpc_register(AICA_CMD_CHN_REQUEST, aica_chn_request, NULL);
+    rpc_register(AICA_CMD_CHN_RELEASE, aica_chn_release, NULL);
+    rpc_register(AICA_CMD_UPDATE, aica_chn_update, NULL);
+    rpc_register(AICA_CMD_START, aica_chn_start, NULL);
+    rpc_register(AICA_CMD_STOP, aica_chn_stop, NULL);
 
     irq_set_handler(EXC_SH4, aica_notify_queue, &aica_rpc);
 
