@@ -5,7 +5,8 @@
 # (c)2023 Ruslan Rostovtsev
 #
 
-OBJS = snd_iface.o \
+OBJS = aica.o \
+	snd_iface.o \
 	snd_sfxmgr.o \
 	snd_stream.o \
 	snd_mem.o \
@@ -24,7 +25,7 @@ snd_iface.c: snd_stream_drv.c
 snd_stream_drv.c: arm/stream.drv $(KOS_BASE)/utils/bin2c/bin2c
 	$(KOS_BASE)/utils/bin2c/bin2c $< $@ snd_stream_drv
 
-snd_iface.o snd_mem.o: KOS_CFLAGS += -I$(KOS_BASE)/kernel/arch/aica/include
+aica.o snd_iface.o snd_mem.o: KOS_CFLAGS += -I$(KOS_BASE)/kernel/arch/aica/include
 
 clean:
 	-rm -f snd_stream_drv.c
