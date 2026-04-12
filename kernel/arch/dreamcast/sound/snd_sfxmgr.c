@@ -36,14 +36,12 @@ typedef struct snd_effect {
     uint32_t  used;
     uint32_t  fmt;
     uint16_t  stereo;
+    int8_t   chn0, chn1;
 
     LIST_ENTRY(snd_effect)  list;
 } snd_effect_t;
 
 struct selist snd_effects;
-
-/* The next channel we'll use to play sound effects. */
-static int sfx_nextchan = 0;
 
 /* Our channel-in-use mask. */
 static uint64_t sfx_inuse = 0;
@@ -69,6 +67,10 @@ void snd_sfx_unload(sfxhnd_t idx) {
 
     if(t->stereo)
         snd_mem_free(t->locr);
+    if(t->chn0 >= 0)
+        snd_sfx_chn_free(t->chn0);
+    if(t->chn1 >= 0)
+        snd_sfx_chn_free(t->chn1);
 
     LIST_REMOVE(t, list);
     free(t);
@@ -258,6 +260,8 @@ static snd_effect_t *create_snd_effect(wavhdr_t *wavhdr, uint8_t *wav_data) {
     bitsize = wavhdr->fmt.sample_size;
     len = wavhdr->chunk.size;
 
+    effect->chn0 = -1;
+    effect->chn1 = -1;
     effect->rate = rate;
     effect->stereo = channels > 1;
     effect->locl = snd_mem_malloc(len / channels);
@@ -459,6 +463,8 @@ sfxhnd_t snd_sfx_load_fd(file_t fd, size_t len, uint32_t rate, uint16_t bitsize,
 
     memset(effect, 0, sizeof(snd_effect_t));
 
+    effect->chn0 = -1;
+    effect->chn1 = -1;
     effect->rate = rate;
     effect->stereo = channels > 1;
 
@@ -631,6 +637,8 @@ sfxhnd_t snd_sfx_load_raw_buf(char *buf, size_t len, uint32_t rate, uint16_t bit
 
     memset(effect, 0, sizeof(snd_effect_t));
 
+    effect->chn0 = -1;
+    effect->chn1 = -1;
     effect->rate = rate;
     effect->stereo = channels > 1;
 
@@ -713,33 +721,6 @@ int snd_sfx_play_chn(int chn, sfxhnd_t idx, int vol, int pan) {
     return snd_sfx_play_ex(&data);
 }
 
-int find_free_channel(void) {
-    int chn, moved, old;
-
-    /* This isn't perfect.. but it should be good enough. */
-    old = irq_disable();
-    chn = sfx_nextchan;
-    moved = 0;
-
-    while(sfx_inuse & (1ULL << chn)) {
-        chn = (chn + 1) % 64;
-
-        if(sfx_nextchan == chn)
-            break;
-
-        moved++;
-    }
-
-    irq_restore(old);
-
-    if(moved && chn == sfx_nextchan) {
-        return -1;
-    }
-
-    sfx_nextchan = (chn + 2) % 64;  /* in case of stereo */
-    return chn;
-}
-
 int snd_sfx_play(sfxhnd_t idx, int vol, int pan) {
     sfx_play_data_t data = {0};
     data.chn = -1;
@@ -750,15 +731,37 @@ int snd_sfx_play(sfxhnd_t idx, int vol, int pan) {
 }
 
 int snd_sfx_play_ex(sfx_play_data_t *data) {
+    snd_effect_t *t = (snd_effect_t *)data->idx;
+    uint8_t chn0, chn1 = 0;
+
     if(data->chn < 0) {
-        data->chn = find_free_channel();
-        if(data->chn < 0) {
-            return -1;
+        /* No channel requested? Use the one associated with the sample. */
+
+        if(t->chn0 < 0) {
+            /* No channel associated with the sample - allocate one. */
+            t->chn0 = snd_sfx_chn_alloc();
+            if(t->chn0 < 0)
+                return -1;
         }
+
+        chn0 = t->chn0;
+    }
+    else {
+        chn0 = data->chn;
+    }
+
+    if(t->stereo) {
+        if(t->chn1 < 0) {
+            /* No channel associated with the sample - allocate one. */
+            t->chn1 = snd_sfx_chn_alloc();
+            if(t->chn1 < 0)
+                return -1;
+        }
+
+        chn1 = t->chn1;
     }
 
     uint32_t size;
-    snd_effect_t *t = (snd_effect_t *)data->idx;
     AICA_CMDSTR_CHANNEL(tmp, cmd, chan);
 
     size = t->len;
@@ -768,7 +771,7 @@ int snd_sfx_play_ex(sfx_play_data_t *data) {
     cmd->cmd = AICA_CMD_CHAN;
     cmd->timestamp = 0;
     cmd->size = AICA_CMDSTR_CHANNEL_SIZE;
-    cmd->cmd_id = data->chn;
+    cmd->cmd_id = chn0;
     chan->cmd = AICA_CH_CMD_START;
     chan->base = t->locl;
     chan->type = t->fmt;
@@ -789,7 +792,7 @@ int snd_sfx_play_ex(sfx_play_data_t *data) {
         snd_sh4_to_aica_stop();
         snd_sh4_to_aica(tmp, cmd->size);
 
-        cmd->cmd_id = data->chn + 1;
+        cmd->cmd_id = chn1;
         chan->base = t->locr;
         chan->pan = 255;
         snd_sh4_to_aica(tmp, cmd->size);
