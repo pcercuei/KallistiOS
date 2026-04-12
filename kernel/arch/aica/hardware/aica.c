@@ -169,15 +169,21 @@ static void aica_set_freq(uint8_t ch, uint32_t freq) {
         FIELD_PREP(SPU_PITCH_FNS, freq_lo);
 }
 
-static void aica_do_update(uint8_t chn, const aica_chn_data_t *data, bool to_dsp) {
+void aica_configure(uint8_t chn, const aica_chn_data_t *data) {
+    chans[chn] = *data;
+}
+
+static void aica_do_update(uint8_t chn, bool to_dsp) {
+    const aica_chn_data_t *data = &chans[chn];
+
     aica_set_vol(chn, data->vol);
     aica_set_pan(chn, data->pan, to_dsp);
     aica_set_freq(chn, data->freq);
     aica_set_sample(chn, data);
 }
 
-void aica_update(uint8_t chn, const aica_chn_data_t *data) {
-    aica_do_update(chn, data, !!(dsp_get_input_mask() & BITLL(chn)));
+void aica_update(uint8_t chn) {
+    aica_do_update(chn, !!(dsp_get_input_mask() & BITLL(chn)));
 }
 
 void aica_update_channels(uint64_t mask) {
@@ -186,7 +192,7 @@ void aica_update_channels(uint64_t mask) {
 
     for(i = 0; mask; i++, mask >>= 1, dsp_mask >>= 1) {
         if(mask & 0x1)
-            aica_do_update(i, &chans[i], dsp_mask & 0x1);
+            aica_do_update(i, dsp_mask & 0x1);
     }
 }
 

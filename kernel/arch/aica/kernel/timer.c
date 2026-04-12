@@ -69,7 +69,8 @@ int timer_init(void) {
         .flags = AICA_CHN_DATA_LOOP,
     };
 
-    aica_update(counter_channel, &counter_data);
+    aica_configure(counter_channel, &counter_data);
+    aica_update(counter_channel);
     aica_start(counter_channel);
 
     irq_set_handler(EXC_TIMER, timer_irq, NULL);

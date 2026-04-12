@@ -40,7 +40,8 @@ typedef struct aica_channel_data {
 void aica_init(aica_chn_data_t *channels);
 void aica_shutdown(void);
 
-void aica_update(uint8_t chn, const aica_chn_data_t *data);
+void aica_configure(uint8_t chn, const aica_chn_data_t *data);
+void aica_update(uint8_t chn);
 void aica_start(uint8_t chn);
 void aica_stop(uint8_t chn);
 
