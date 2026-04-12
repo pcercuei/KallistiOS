@@ -65,6 +65,12 @@ typedef struct aica_header {
 */
 extern rpc_t aica_rpc;
 
+/** \brief AICA header
+
+    This structure is directly accessible from both ARM and SH4 sides.
+*/
+extern aica_header_t aica_header;
+
 /** \brief Offset in the sound RAM at which the firmware header address will
     be placed. */
 #define AICA_HEADER_ADDR    0x1ffffc

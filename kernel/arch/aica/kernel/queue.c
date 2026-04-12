@@ -38,9 +38,12 @@ static rpc_queue_t aica_in_queue = {
     .size = __array_size(in_buffer),
 };
 
-static aica_header_t aica_header = {
+static aica_chn_data_t aica_channels[64];
+
+aica_header_t aica_header = {
     .arm_queue = &aica_in_queue,
     .sh4_queue = &aica_out_queue,
+    .channels = aica_channels,
 };
 
 static void aica_rpc_copy(void *dst, const void *src, size_t len) {
