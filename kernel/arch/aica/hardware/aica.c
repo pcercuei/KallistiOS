@@ -30,10 +30,10 @@ static aica_chn_data_t *chans;
 /* Channels mask in inversed order (bit 0 is channel 63, bit 63 is channel 0) */
 static uint64_t channels_mask;
 
-void aica_init(aica_chn_data_t *channels) {
+void aica_init(void) {
     int i, j;
 
-    chans = channels;
+    chans = aica_header.channels;
 
     /* Initialize AICA channels */
     SPU_REG32(REG_SPU_MASTER_VOL) = 0;
