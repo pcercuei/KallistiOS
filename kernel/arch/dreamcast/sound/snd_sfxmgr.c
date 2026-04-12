@@ -23,8 +23,11 @@
 #include <dc/spu.h>
 #include <dc/sound/sound.h>
 #include <dc/sound/sfxmgr.h>
+#include <aica/aica.h>
 
 #include "arm/aica_cmd_iface.h"
+
+#define BITLL(x) (1ull << (x))
 
 struct snd_effect;
 LIST_HEAD(selist, snd_effect);
@@ -714,6 +717,7 @@ err_occurred:
 
 int snd_sfx_play_chn(int chn, sfxhnd_t idx, int vol, int pan) {
     sfx_play_data_t data = {0};
+
     data.chn = chn;
     data.idx = idx;
     data.vol = vol;
@@ -728,6 +732,7 @@ int snd_sfx_play(sfxhnd_t idx, int vol, int pan) {
 int snd_sfx_play_ex(sfx_play_data_t *data) {
     snd_effect_t *t = (snd_effect_t *)data->idx;
     uint8_t chn0, chn1 = 0;
+    uint64_t mask;
 
     if(data->chn < 0) {
         /* No channel requested? Use the one associated with the sample. */
@@ -756,100 +761,57 @@ int snd_sfx_play_ex(sfx_play_data_t *data) {
         chn1 = t->chn1;
     }
 
-    uint32_t size;
-    AICA_CMDSTR_CHANNEL(tmp, cmd, chan);
+    uint16_t size = t->len < 65534 ? t->len : 65534;
+    aica_chn_data_t chn_data = {
+        .flags = data->loop ? AICA_CHN_DATA_LOOP : 0,
+        .vol = data->vol,
+        .pan = t->stereo ? 0 : data->pan,
+        .freq = data->freq > 0 ? (uint32_t)data->freq : t->rate,
+        .loopstart = (uint16_t)data->loopstart,
+        .loopend = (uint16_t)(data->loopend ? data->loopend : size),
+        .addr = t->locl,
+        .type = t->fmt,
+    };
 
-    size = t->len;
+    aica_configure(chn0, &chn_data);
+    mask = BITLL(chn0);
 
-    if(size >= 65535) size = 65534;
+    if(t->stereo) {
+        chn_data.pan = 255;
+        chn_data.addr = t->locr;
 
-    cmd->cmd = AICA_CMD_CHAN;
-    cmd->timestamp = 0;
-    cmd->size = AICA_CMDSTR_CHANNEL_SIZE;
-    cmd->cmd_id = chn0;
-    chan->cmd = AICA_CH_CMD_START;
-    chan->base = t->locl;
-    chan->type = t->fmt;
-    chan->length = size;
-    chan->loop = data->loop;
-    chan->loopstart = data->loopstart;
-    chan->loopend = data->loopend ? data->loopend : size;
-    chan->freq = data->freq > 0 ? (uint32_t)data->freq : t->rate;
-    chan->vol = data->vol;
+        aica_configure(chn1, &chn_data);
 
-    if(!t->stereo) {
-        chan->pan = data->pan;
-        snd_sh4_to_aica(tmp, cmd->size);
+	mask |= BITLL(chn1);
     }
-    else {
-        chan->pan = 0;
 
-        snd_sh4_to_aica_stop();
-        snd_sh4_to_aica(tmp, cmd->size);
-
-        cmd->cmd_id = chn1;
-        chan->base = t->locr;
-        chan->pan = 255;
-        snd_sh4_to_aica(tmp, cmd->size);
-        snd_sh4_to_aica_start();
-    }
+    aica_update_channels(mask);
+    aica_start_channels(mask);
 
     return 0;
 }
 
 void snd_sfx_stop(int chn) {
-    AICA_CMDSTR_CHANNEL(tmp, cmd, chan);
-    cmd->cmd = AICA_CMD_CHAN;
-    cmd->timestamp = 0;
-    cmd->size = AICA_CMDSTR_CHANNEL_SIZE;
-    cmd->cmd_id = chn;
-    chan->cmd = AICA_CH_CMD_STOP;
-    chan->base = 0;
-    chan->type = 0;
-    chan->length = 0;
-    chan->loop = 0;
-    chan->loopstart = 0;
-    chan->loopend = 0;
-    chan->freq = 44100;
-    chan->vol = 0;
-    chan->pan = 0;
-    snd_sh4_to_aica(tmp, cmd->size);
+    aica_stop(chn);
 }
 
 void snd_sfx_stop_all(void) {
-    int i;
-
-    for(i = 0; i < 64; i++) {
-        if(sfx_inuse & (1ULL << i))
-            continue;
-
-        snd_sfx_stop(i);
-    }
+    aica_stop_channels(sfx_inuse);
 }
 
 int snd_sfx_chn_alloc(void) {
-    int old, chn;
+    int chn;
 
-    old = irq_disable();
+    chn = aica_reserve_channel();
+    if (chn < 0)
+        return -1;
 
-    for(chn = 0; chn < 64; chn++)
-        if(!(sfx_inuse & (1ULL << chn)))
-            break;
-
-    if(chn >= 64)
-        chn = -1;
-    else
-        sfx_inuse |= 1ULL << chn;
-
-    irq_restore(old);
+    sfx_inuse |= BITLL(chn);
 
     return chn;
 }
 
 void snd_sfx_chn_free(int chn) {
-    int old;
-
-    old = irq_disable();
-    sfx_inuse &= ~(1ULL << chn);
-    irq_restore(old);
+    sfx_inuse &= ~BITLL(chn);
+    aica_unreserve_channel(chn);
 }

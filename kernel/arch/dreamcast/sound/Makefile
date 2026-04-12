@@ -25,7 +25,7 @@ snd_iface.c: snd_stream_drv.c
 snd_stream_drv.c: arm/stream.drv $(KOS_BASE)/utils/bin2c/bin2c
 	$(KOS_BASE)/utils/bin2c/bin2c $< $@ snd_stream_drv
 
-aica.o snd_iface.o snd_mem.o: KOS_CFLAGS += -I$(KOS_BASE)/kernel/arch/aica/include
+$(OBJS): KOS_CFLAGS += -I$(KOS_BASE)/kernel/arch/aica/include
 
 clean:
 	-rm -f snd_stream_drv.c
