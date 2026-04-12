@@ -188,10 +188,7 @@ void snd_sfx_unload_all(void);
                             way to the left, 128 is center, 255 is all the way
                             to the right.
 
-    \return                 The channel used to play the sound effect (or the
-                            left channel in the case of a stereo sound, the
-                            right channel will be the next one) on success, or
-                            -1 on failure.
+    \return                 0 on success, -1 on failure.
 */
 int snd_sfx_play(sfxhnd_t idx, int vol, int pan);
 
@@ -209,7 +206,7 @@ int snd_sfx_play(sfxhnd_t idx, int vol, int pan);
                             way to the left, 128 is center, 255 is all the way
                             to the right.
 
-    \return                 chn
+    \return                 0 on success, -1 on failure.
 */
 int snd_sfx_play_chn(int chn, sfxhnd_t idx, int vol, int pan);
 
@@ -224,7 +221,7 @@ int snd_sfx_play_chn(int chn, sfxhnd_t idx, int vol, int pan);
     \param  data            The data structure containing the information needed
                             to play the sound effect.
 
-    \return                 chn
+    \return                 0 on success, -1 on failure.
 */
 int snd_sfx_play_ex(sfx_play_data_t *data);
 

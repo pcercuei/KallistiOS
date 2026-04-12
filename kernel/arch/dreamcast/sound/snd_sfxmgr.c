@@ -799,7 +799,7 @@ int snd_sfx_play_ex(sfx_play_data_t *data) {
         snd_sh4_to_aica_start();
     }
 
-    return data->chn;
+    return 0;
 }
 
 void snd_sfx_stop(int chn) {
