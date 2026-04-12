@@ -32,6 +32,8 @@
 /* Include the default firmware blob */
 #include "snd_stream_drv.c"
 
+struct aica_header aica_header;
+
 /* Are we initted? */
 static int initted = 0;
 
@@ -176,7 +178,6 @@ static void snd_callback(uint32_t source, void *data) {
 /* Initialize driver; note that this replaces the AICA program so that
    if you had anything else going on, it's gone now! */
 int snd_init(void) {
-    struct aica_header aica_header;
     aram_addr_t header_addr;
     size_t amt;
 
