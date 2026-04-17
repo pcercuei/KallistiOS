@@ -29,6 +29,10 @@ __BEGIN_DECLS
 
 #include <time.h>
 
+/* \cond INTERNAL */
+extern time_t __kos_boot_time;
+/* \endcond */
+
 /** \defgroup rtc Real-Time Clock
     \brief        Real-Time Clock (RTC) Management
     \ingroup      timing
@@ -89,7 +93,19 @@ static inline time_t rtc_unix_secs(void) {
     \sa rtc_unix_secs()
 */
 static inline int rtc_set_unix_secs(time_t time) {
-    return arch_rtc_set_unix_secs(time);
+    time_t oldtime;
+    int ret;
+
+    oldtime = arch_rtc_unix_secs();
+
+    ret = arch_rtc_set_unix_secs(time);
+    if(ret)
+        return ret;
+
+    /* Update the boot time as well */
+    __kos_boot_time += time - oldtime;
+
+    return 0;
 }
 
 /** \brief   Get the time since the system was booted.
@@ -101,13 +117,19 @@ static inline int rtc_set_unix_secs(time_t time) {
     \return                 The boot time as a UNIX-style timestamp.
 */
 static inline time_t rtc_boot_time(void) {
-    return arch_rtc_boot_time();
+    return __kos_boot_time;
 }
 
 /* \cond INTERNAL */
 /* Internally called Init / Shutdown */
 static inline int rtc_init(void) {
-    return arch_rtc_init();
+    int ret = arch_rtc_init();
+    if(ret)
+        return ret;
+
+    __kos_boot_time = arch_rtc_unix_secs();
+
+    return 0;
 }
 
 static inline void rtc_shutdown(void) {

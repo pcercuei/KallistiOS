@@ -225,3 +225,6 @@ timer_ms_gettime64
 timer_us_gettime64
 timer_primary_set_callback
 timer_primary_wakeup
+
+# RTC
+__kos_boot_time

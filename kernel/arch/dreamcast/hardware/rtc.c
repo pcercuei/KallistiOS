@@ -26,7 +26,6 @@
  */
 
 #include <arch/rtc.h>
-#include <kos/timer.h>
 #include <dc/g2bus.h>
 
 #include <stdint.h>
@@ -84,7 +83,7 @@
 #define RTC_RETRY_COUNT         3
 
 /* The boot time; we'll save this in rtc_init() */
-time_t dc_boot_time;
+time_t __kos_boot_time;
 
 /* Returns the date/time value as a UNIX epoch time stamp */
 time_t arch_rtc_unix_secs(void) {
@@ -159,12 +158,6 @@ int arch_rtc_set_unix_secs(time_t secs) {
         errno = EPERM;
         result = -1;
     }
-
-    /* We have to update the boot time now as well, subtracting
-       the amount of time that has elapsed since boot from the
-       new time we've just set. */
-    timer_ms_gettime(&s, &ms);
-    dc_boot_time = ((time_t)rtcnew - RTC_UNIX_EPOCH_DELTA) - s;
 
     return result;
 }

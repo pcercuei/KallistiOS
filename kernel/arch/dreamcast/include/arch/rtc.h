@@ -44,17 +44,10 @@ __BEGIN_DECLS
     February 06 2086 06:28:15.
 */
 
-extern time_t dc_boot_time;
-
 time_t arch_rtc_unix_secs(void);
 int arch_rtc_set_unix_secs(time_t time);
 
-static inline time_t arch_rtc_boot_time(void) {
-    return dc_boot_time;
-}
-
 static inline int arch_rtc_init(void) {
-    dc_boot_time = arch_rtc_unix_secs();
     return 0;
 }
 
