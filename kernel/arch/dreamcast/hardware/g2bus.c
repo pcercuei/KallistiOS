@@ -18,15 +18,17 @@
  */
 
 #include <stdint.h>
-#include <kos/irq.h>
+#include <kos/mutex.h>
 #include <dc/g2bus.h>
 
 #define G2_DMA_SUSPEND_SPU     (*((volatile uint32_t *)0xa05f781C))
 #define G2_DMA_SUSPEND_BBA     (*((volatile uint32_t *)0xa05f783C))
 #define G2_DMA_SUSPEND_CH2     (*((volatile uint32_t *)0xa05f785C))
 
+static mutex_t g2_mutex = MUTEX_INITIALIZER;
+
 g2_ctx_t g2_lock(void) {
-    g2_ctx_t ctx = { .irq_state = irq_disable() };
+    mutex_lock(&g2_mutex);
 
     /* Suspend any G2 DMA */
     G2_DMA_SUSPEND_SPU = 1;
@@ -35,16 +37,18 @@ g2_ctx_t g2_lock(void) {
 
     while(FIFO_STATUS & (FIFO_SH4 | FIFO_G2));
 
-    return ctx;
+    return (g2_ctx_t){ 0 };
 }
 
 void g2_unlock(g2_ctx_t ctx) {
+    (void)ctx;
+
     /* Restore suspended G2 DMA */
     G2_DMA_SUSPEND_SPU = 0;
     G2_DMA_SUSPEND_BBA = 0;
     G2_DMA_SUSPEND_CH2 = 0;
 
-    irq_restore(ctx.irq_state);
+    mutex_unlock(&g2_mutex);
 }
 
 /* Always use these functions to access G2 bus memory (includes the SPU
