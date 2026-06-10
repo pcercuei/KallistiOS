@@ -9,6 +9,7 @@
 #include <kos/regfield.h>
 #include <arch/arch.h>
 #include <dc/aica.h>
+#include <dc/aica_registers.h>
 #include <dc/spu.h>
 #include <dc/g2bus.h>
 #include <dc/sq.h>
@@ -33,10 +34,6 @@ either in your program statically causes them to be linked into the
 kernel; so don't use them if you don't need to =).
 
 */
-
-/* Some convenience macros */
-#define SNDREGADDR(x) (0xa0700000 + (x))
-#define CHNREGADDR(chn, x) SNDREGADDR(0x80*(chn) + (x))
 
 /* memcpy and memset designed for sound RAM; for addresses, don't
    bother to include the 0xa0800000 offset that is implied. 'length'
@@ -257,12 +254,12 @@ void spu_enable(void) {
     aica_init();
 
     /* Start the ARM processor */
-    g2_write_32(SNDREGADDR(0x2c00), g2_read_32(SNDREGADDR(0x2c00)) & ~1);
+    SPU_REG32(REG_SPU_ARM_CTRL) &= ~SPU_ARM_CTRL_RESET;
 }
 
 void spu_disable(void) {
     /* Stop the ARM processor */
-    g2_write_32(SNDREGADDR(0x2c00), g2_read_32(SNDREGADDR(0x2c00)) | 1);
+    SPU_REG32(REG_SPU_ARM_CTRL) |= SPU_ARM_CTRL_RESET;
 
     /* Make sure we didn't leave any notes running */
     aica_shutdown();
@@ -276,11 +273,14 @@ void spu_cdda_volume(int left_volume, int right_volume) {
     if(right_volume > 15)
         right_volume = 15;
 
-    g2_fifo_wait();
-    g2_write_32(SNDREGADDR(0x2040),
-                (g2_read_32(SNDREGADDR(0x2040)) & ~0xff00) | (left_volume << 8));
-    g2_write_32(SNDREGADDR(0x2044),
-                (g2_read_32(SNDREGADDR(0x2044)) & ~0xff00) | (right_volume << 8));
+    uint32_t left = SPU_REG32(REG_SPU_CDDA_LEFT);
+    uint32_t right = SPU_REG32(REG_SPU_CDDA_RIGHT);
+
+    left = (left & ~SPU_CDDA_VOL) | FIELD_PREP(SPU_CDDA_VOL, left_volume);
+    right = (right & ~SPU_CDDA_VOL) | FIELD_PREP(SPU_CDDA_VOL, right_volume);
+
+    SPU_REG32(REG_SPU_CDDA_LEFT) = left;
+    SPU_REG32(REG_SPU_CDDA_RIGHT) = right;
 }
 
 void spu_cdda_pan(int left_pan, int right_pan) {
@@ -294,42 +294,42 @@ void spu_cdda_pan(int left_pan, int right_pan) {
 
     right_pan &= 0x1f;
 
-    g2_fifo_wait();
-    g2_write_32(SNDREGADDR(0x2040),
-                (g2_read_32(SNDREGADDR(0x2040)) & ~0xff) | (left_pan << 0));
-    g2_write_32(SNDREGADDR(0x2044),
-                (g2_read_32(SNDREGADDR(0x2044)) & ~0xff) | (right_pan << 0));
+    uint32_t left = SPU_REG32(REG_SPU_CDDA_LEFT);
+    uint32_t right = SPU_REG32(REG_SPU_CDDA_RIGHT);
+
+    left = (left & ~SPU_CDDA_PAN) | FIELD_PREP(SPU_CDDA_PAN, left_pan);
+    right = (right & ~SPU_CDDA_PAN) | FIELD_PREP(SPU_CDDA_PAN, right_pan);
+
+    SPU_REG32(REG_SPU_CDDA_LEFT) = left;
+    SPU_REG32(REG_SPU_CDDA_RIGHT) = right;
 }
 
-/* Initialize CDDA stuff */
-static void spu_cdda_init(void) {
-    spu_cdda_volume(15, 15);
-    spu_cdda_pan(0, 31);
+static inline bool spu_has_8mb_ram(void) {
+    return hardware_sys_mode(NULL) != HW_TYPE_RETAIL;
 }
 
 /* Set master volume (0..15) and mono/stereo settings */
 void spu_master_mixer(int volume, int stereo) {
-    uint32_t val;
+    uint32_t val = FIELD_PREP(SPU_MASTER_VOL_VOL, volume);
 
-    g2_fifo_wait();
-    val = g2_read_32(SNDREGADDR(0x2800));
-    g2_write_32(SNDREGADDR(0x2800),
-                (val & ~0x800f) | (volume & 0xf) | (stereo ? 0 : 0x8000));
+    if(spu_has_8mb_ram())
+        val |= SPU_MASTER_VOL_8MB;
+    if(!stereo)
+        val |= SPU_MASTER_VOL_MONO;
+
+    SPU_REG32(REG_SPU_MASTER_VOL) = val;
 }
 
 /* Initialize the SPU; by default it will be left in a state of
    reset until you upload a program. */
 int spu_init(void) {
-    bool is_retail = hardware_sys_mode(NULL) == HW_TYPE_RETAIL;
-
-    /* Set the RAM mode (2MB or 8MB) and default to stereo/min volume */
-    g2_write_32(SNDREGADDR(0x2800), is_retail ? 0 : BIT(9));
+    spu_master_mixer(15, 1);
 
     /* Stop the ARM */
     spu_disable();
 
     /* Clear out sound RAM */
-    spu_memset_sq(0, 0, is_retail ? 0x200000 : 0x800000);
+    spu_memset_sq(0, 0, spu_has_8mb_ram() ? 0x800000 : 0x200000);
 
     /* Load a default "program" into the SPU that just executes
        an infinite loop, so that CD audio works. */
@@ -341,9 +341,6 @@ int spu_init(void) {
 
     /* Wait a few clocks */
     thd_sleep(10);
-
-    /* Initialize CDDA channels */
-    spu_cdda_init();
 
     return 0;
 }
