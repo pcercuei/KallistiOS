@@ -8,6 +8,7 @@
 #include <kos/thread.h>
 #include <kos/regfield.h>
 #include <arch/arch.h>
+#include <dc/aica.h>
 #include <dc/spu.h>
 #include <dc/g2bus.h>
 #include <dc/sq.h>
@@ -249,43 +250,11 @@ void spu_memset_sq(uintptr_t dst, uint32_t what, size_t length) {
     }
 }
 
-/* Reset the AICA channel registers */
-void spu_reset_chans(void) {
-    int i;
-    uint32_t sav;
-
-    g2_lock_scoped();
-    g2_fifo_wait();
-
-    /* Read current mode and stereo settings */
-    sav = g2_read_32_raw(SNDREGADDR(0x2800));
-
-    g2_fifo_wait();
-    g2_write_32_raw(SNDREGADDR(0x2800), sav & ~0x000f);
-    g2_fifo_wait();
-
-    for(i = 0; i < 64; i++) {
-        g2_write_32_raw(CHNREGADDR(i, 0), 0x8000);
-        g2_write_32_raw(CHNREGADDR(i, 0x10), 0x1f);
-        g2_write_32_raw(CHNREGADDR(i, 0x14), 0x1f);
-
-        g2_write_32_raw(CHNREGADDR(i, 0x2C), 0x1ff8);
-        g2_write_32_raw(CHNREGADDR(i, 0x30), 0x1ff8);
-        g2_write_32_raw(CHNREGADDR(i, 0x34), 0x1ff8);
-        g2_write_32_raw(CHNREGADDR(i, 0x38), 0x1ff8);
-        g2_write_32_raw(CHNREGADDR(i, 0x3C), 0x1ff8);
-
-        g2_fifo_wait();
-    }
-
-    g2_write_32_raw(SNDREGADDR(0x2800), (sav & ~0x000f) | 0x000f);
-}
-
 /* Enable/disable the SPU; note that disable implies reset of the
    ARM CPU core. */
 void spu_enable(void) {
-    /* Reset all the channels */
-    spu_reset_chans();
+    /* Reset the AICA hardware */
+    aica_init();
 
     /* Start the ARM processor */
     g2_write_32(SNDREGADDR(0x2c00), g2_read_32(SNDREGADDR(0x2c00)) & ~1);
@@ -296,7 +265,7 @@ void spu_disable(void) {
     g2_write_32(SNDREGADDR(0x2c00), g2_read_32(SNDREGADDR(0x2c00)) | 1);
 
     /* Make sure we didn't leave any notes running */
-    spu_reset_chans();
+    aica_shutdown();
 }
 
 /* Set CDDA volume: values are 0-15 */
