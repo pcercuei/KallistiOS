@@ -17,6 +17,7 @@
 #include <kos/mutex.h>
 #include <kos/timer.h>
 #include <dc/g2bus.h>
+#include <dc/aica.h>
 #include <dc/spu.h>
 #include <dc/sound/sound.h>
 
@@ -32,6 +33,8 @@ static int initted = 0;
    There are some cases like stereo stream control + stereo sfx control
    at the same time in separate threads. */
 static mutex_t queue_proc_mutex = MUTEX_INITIALIZER;
+
+static mutex_t getpos_lock = MUTEX_INITIALIZER;
 
 /* Initialize driver; note that this replaces the AICA program so that
    if you had anything else going on, it's gone now! */
@@ -210,9 +213,11 @@ void snd_poll_resp(void) {
 }
 
 uint16_t snd_get_pos(unsigned int ch) {
-    return g2_read_32(SPU_RAM_UNCACHED_BASE + AICA_CHANNEL(ch) + offsetof(aica_channel_t, pos)) & 0xffff;
+    mutex_lock_scoped(&getpos_lock);
+
+    return aica_get_pos_unlocked(ch);
 }
 
 bool snd_is_playing(unsigned int ch) {
-    return g2_read_32(MEM_AREA_P2_BASE + 0x00700000 + 0x80 * ch) & AICA_CHANNEL_KEYONB;
+    return aica_is_started(ch);
 }
