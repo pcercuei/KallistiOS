@@ -146,5 +146,5 @@ void g2_memset_8(uintptr_t address, uint8_t c, size_t amt) {
 /* When writing to the SPU RAM, this is required at least every 8 32-bit
    writes that you execute */
 void g2_fifo_wait(void) {
-    while(FIFO_STATUS & (FIFO_AICA | FIFO_G2));
+    while(FIFO_STATUS & FIFO_G2);
 }
