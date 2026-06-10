@@ -106,49 +106,32 @@ int snd_init(void);
 */
 void snd_shutdown(void);
 
-/** \brief  Copy a request packet to the AICA queue.
+__depr("AICA queue has been dropped")
+static inline int snd_sh4_to_aica(void *packet, uint32_t size) {
+    (void)packet;
+    (void)size;
 
-    This function is to put in a low-level request using the built-in streaming
-    sound driver.
+    return -1;
+}
 
-    \param  packet          The packet of data to copy.
-    \param  size            The size of the packet, in 32-bit increments.
-    \retval 0               On success (no error conditions defined).
-*/
-int snd_sh4_to_aica(void *packet, uint32_t size);
+__depr("AICA queue has been dropped")
+static inline void snd_sh4_to_aica_start(void) {
+}
 
-/** \brief  Begin processing AICA queue requests.
+__depr("AICA queue has been dropped")
+static inline void snd_sh4_to_aica_stop(void) {
+}
 
-    This function begins processing of any queued requests in the AICA queue.
-*/
-void snd_sh4_to_aica_start(void);
+__depr("AICA queue has been dropped")
+static inline int snd_aica_to_sh4(void *packetout) {
+    (void)packetout;
 
-/** \brief  Stop processing AICA queue requests.
+    return -1;
+}
 
-    This function stops the processing of any queued requests in the AICA queue.
-*/
-void snd_sh4_to_aica_stop(void);
-
-/** \brief  Transfer a packet of data from the AICA's SH4 queue.
-
-    This function is used to retrieve a packet of data from the AICA back to the
-    SH4. The buffer passed in should at least contain 1024 bytes of space to
-    make sure any packet can fit.
-
-    \param  packetout       The buffer to store the retrieved packet in.
-    \retval -1              On failure. Failure probably indicates the queue has
-                            been corrupted, and thus should be reinitialized.
-    \retval 0               If no packets are available.
-    \retval 1               On successful copy of one packet.
-*/
-int snd_aica_to_sh4(void *packetout);
-
-/** \brief  Poll for a response from the AICA.
-
-    This function waits for the AICA to respond to a previously sent request.
-    This function is not safe to call in an IRQ, as it does implicitly wait.
-*/
-void snd_poll_resp(void);
+__depr("AICA queue has been dropped")
+static inline void snd_poll_resp(void) {
+}
 
 /** \brief  Separates stereo PCM samples into 2 mono channels.
 
