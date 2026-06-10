@@ -23,14 +23,15 @@
 #include <kos/sem.h>
 #include <kos/thread.h>
 #include <kos/timer.h>
+#include <kos/workqueue.h>
+#include <dc/aica.h>
 #include <dc/g2bus.h>
 #include <dc/sq.h>
 #include <dc/spu.h>
+#include <dc/sound/aica_comm.h>
 #include <dc/sound/sound.h>
 #include <dc/sound/stream.h>
 #include <dc/sound/sfxmgr.h>
-
-#include "arm/aica_cmd_iface.h"
 
 /*
 
@@ -499,8 +500,6 @@ void snd_stream_queue_disable(snd_stream_hnd_t hnd) {
 
 /* Start streaming (or if queueing is enabled, just get ready) */
 static void snd_stream_start_type(snd_stream_hnd_t hnd, uint32_t type, uint32_t freq, int st) {
-    AICA_CMDSTR_CHANNEL(tmp, cmd, chan);
-
     CHECK_HND(hnd);
 
     if(!streams[hnd].get_data && !streams[hnd].req_data) {
@@ -545,48 +544,29 @@ static void snd_stream_start_type(snd_stream_hnd_t hnd, uint32_t type, uint32_t 
     /* Start playing from the beginning */
     streams[hnd].last_write_pos = 0;
 
-    /* Make sure these are sync'd (and/or delayed) */
-    snd_sh4_to_aica_stop();
+    uint8_t ch0 = streams[hnd].ch[0];
 
     /* Channel 0 */
-    cmd->cmd = AICA_CMD_CHAN;
-    cmd->timestamp = 0;
-    cmd->size = AICA_CMDSTR_CHANNEL_SIZE;
-    cmd->cmd_id = streams[hnd].ch[0];
-    chan->cmd = AICA_CH_CMD_START | AICA_CH_START_DELAY;
-    chan->base = streams[hnd].spu_ram_sch[0];
-    chan->type = type;
-    chan->length = bytes_to_samples(hnd, streams[hnd].buffer_size);
-    chan->loop = 1;
-    chan->loopstart = 0;
-    chan->loopend = chan->length;
-    chan->freq = freq;
-    chan->vol = 255;
-    chan->pan = streams[hnd].channels == 2 ? 0 : 128;
-    snd_sh4_to_aica(tmp, cmd->size);
+    aica_set_sample(ch0, (aica_smtype_t)type, streams[hnd].spu_ram_sch[0], 0,
+                    bytes_to_samples(hnd, streams[hnd].buffer_size), true);
+    aica_set_vol(ch0, 255);
+    aica_set_pan(ch0, streams[hnd].channels == 2 ? 0 : 128);
+    aica_set_freq(ch0, freq);
 
     if(streams[hnd].channels == 2) {
+        uint8_t ch1 = streams[hnd].ch[1];
+
         /* Channel 1 */
-        cmd->cmd_id = streams[hnd].ch[1];
-        chan->base = streams[hnd].spu_ram_sch[1];
-        chan->pan = 255;
-        snd_sh4_to_aica(tmp, cmd->size);
+        aica_set_sample(ch1, (aica_smtype_t)type, streams[hnd].spu_ram_sch[1], 0,
+                        bytes_to_samples(hnd, streams[hnd].buffer_size), true);
+        aica_set_vol(ch1, 255);
+        aica_set_pan(ch1, 255);
+        aica_set_freq(ch1, freq);
 
-        /* Start both channels simultaneously */
-        cmd->cmd_id = (1ULL << streams[hnd].ch[0]) |
-                      (1ULL << streams[hnd].ch[1]);
-    }
-    else {
-        /* Start one channel */
-        cmd->cmd_id = (1ULL << streams[hnd].ch[0]);
+        aica_start(ch1);
     }
 
-    chan->cmd = AICA_CH_CMD_START | AICA_CH_START_SYNC;
-    snd_sh4_to_aica(tmp, cmd->size);
-
-    /* Process the changes */
-    if(!streams[hnd].queueing)
-        snd_sh4_to_aica_start();
+    aica_start(ch0);
 }
 
 void snd_stream_start(snd_stream_hnd_t hnd, uint32_t freq, int st) {
@@ -605,38 +585,20 @@ void snd_stream_start_adpcm(snd_stream_hnd_t hnd, uint32_t freq, int st) {
 void snd_stream_queue_go(snd_stream_hnd_t hnd) {
     (void)hnd;
     CHECK_HND(hnd);
-    snd_sh4_to_aica_start();
 }
 
 /* Stop streaming */
 void snd_stream_stop(snd_stream_hnd_t hnd) {
-    AICA_CMDSTR_CHANNEL(tmp, cmd, chan);
-
     CHECK_HND(hnd);
 
     if(!streams[hnd].get_data && !streams[hnd].req_data) {
         return;
     }
 
-    if(streams[hnd].channels == 2) {
-        snd_sh4_to_aica_stop();
-    }
+    aica_stop(streams[hnd].ch[0]);
 
-    /* Stop stream */
-    /* Channel 0 */
-    cmd->cmd = AICA_CMD_CHAN;
-    cmd->timestamp = 0;
-    cmd->size = AICA_CMDSTR_CHANNEL_SIZE;
-    cmd->cmd_id = streams[hnd].ch[0];
-    chan->cmd = AICA_CH_CMD_STOP;
-    snd_sh4_to_aica(tmp, cmd->size);
-
-    if(streams[hnd].channels == 2) {
-        /* Channel 1 */
-        cmd->cmd_id = streams[hnd].ch[1];
-        snd_sh4_to_aica(tmp, cmd->size);
-        snd_sh4_to_aica_start();
-    }
+    if(streams[hnd].channels == 2)
+        aica_stop(streams[hnd].ch[1]);
 }
 
 /* The DMA will chain to this to start the second DMA. */
@@ -802,9 +764,9 @@ int snd_stream_poll(snd_stream_hnd_t hnd) {
     assert(stream->channels != 0);
 
     /* Get channels position */
-    current_play_pos = g2_read_32(SPU_RAM_UNCACHED_BASE +
-                        AICA_CHANNEL(stream->ch[0]) +
-                        offsetof(aica_channel_t, pos)) & 0xffff;
+    current_play_pos = snd_get_pos(stream->ch[0]);
+
+    dbglog(DBG_INFO, "Channel %u pos: %hu\n", stream->ch[0], current_play_pos);
 
     needed_bytes = samples_to_bytes(hnd, current_play_pos);
 
@@ -869,51 +831,14 @@ int snd_stream_poll(snd_stream_hnd_t hnd) {
 
 /* Set the volume on the streaming channels */
 void snd_stream_volume(snd_stream_hnd_t hnd, int vol) {
-    AICA_CMDSTR_CHANNEL(tmp, cmd, chan);
+    aica_set_vol(streams[hnd].ch[0], vol);
 
-    CHECK_HND(hnd);
-
-    if(streams[hnd].channels == 2) {
-        snd_sh4_to_aica_stop();
-    }
-
-    cmd->cmd = AICA_CMD_CHAN;
-    cmd->timestamp = 0;
-    cmd->size = AICA_CMDSTR_CHANNEL_SIZE;
-    cmd->cmd_id = streams[hnd].ch[0];
-    chan->cmd = AICA_CH_CMD_UPDATE | AICA_CH_UPDATE_SET_VOL;
-    chan->vol = vol;
-    snd_sh4_to_aica(tmp, cmd->size);
-
-    if(streams[hnd].channels == 2) {
-        cmd->cmd_id = streams[hnd].ch[1];
-        snd_sh4_to_aica(tmp, cmd->size);
-        snd_sh4_to_aica_start();
-    }
+    if(streams[hnd].channels == 2)
+        aica_set_vol(streams[hnd].ch[1], vol);
 }
 
 /* Set the panning on the streaming channels */
 void snd_stream_pan(snd_stream_hnd_t hnd, int left_pan, int right_pan) {
-    AICA_CMDSTR_CHANNEL(tmp, cmd, chan);
-
-    CHECK_HND(hnd);
-
-    if(streams[hnd].channels == 2) {
-        snd_sh4_to_aica_stop();
-    }
-
-    cmd->cmd = AICA_CMD_CHAN;
-    cmd->timestamp = 0;
-    cmd->size = AICA_CMDSTR_CHANNEL_SIZE;
-    cmd->cmd_id = streams[hnd].ch[0];
-    chan->cmd = AICA_CH_CMD_UPDATE | AICA_CH_UPDATE_SET_PAN;
-    chan->pan = left_pan;
-    snd_sh4_to_aica(tmp, cmd->size);
-
-    if(streams[hnd].channels == 2) {
-        cmd->cmd_id = streams[hnd].ch[1];
-        chan->pan = right_pan;
-        snd_sh4_to_aica(tmp, cmd->size);
-        snd_sh4_to_aica_start();
-    }
+    aica_set_pan(streams[hnd].ch[0], left_pan);
+    aica_set_pan(streams[hnd].ch[1], right_pan);
 }
