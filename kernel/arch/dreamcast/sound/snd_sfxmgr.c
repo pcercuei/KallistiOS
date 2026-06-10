@@ -20,11 +20,11 @@
 #include <kos/dbglog.h>
 #include <kos/fs.h>
 #include <kos/irq.h>
+#include <dc/aica.h>
 #include <dc/spu.h>
+#include <dc/sound/aica_comm.h>
 #include <dc/sound/sound.h>
 #include <dc/sound/sfxmgr.h>
-
-#include "arm/aica_cmd_iface.h"
 
 struct snd_effect;
 LIST_HEAD(selist, snd_effect);
@@ -41,12 +41,6 @@ typedef struct snd_effect {
 } snd_effect_t;
 
 struct selist snd_effects;
-
-/* The next channel we'll use to play sound effects. */
-static int sfx_nextchan = 0;
-
-/* Our channel-in-use mask. */
-static uint64_t sfx_inuse = 0;
 
 /* Unload all loaded samples and free their SPU RAM */
 void snd_sfx_unload_all(void) {
@@ -727,33 +721,6 @@ int snd_sfx_play_chn(int chn, sfxhnd_t idx, int vol, int pan) {
     return snd_sfx_play_ex(&data);
 }
 
-int find_free_channel(void) {
-    int chn, moved, old;
-
-    /* This isn't perfect.. but it should be good enough. */
-    old = irq_disable();
-    chn = sfx_nextchan;
-    moved = 0;
-
-    while(sfx_inuse & (1ULL << chn)) {
-        chn = (chn + 1) % 64;
-
-        if(sfx_nextchan == chn)
-            break;
-
-        moved++;
-    }
-
-    irq_restore(old);
-
-    if(moved && chn == sfx_nextchan) {
-        return -1;
-    }
-
-    sfx_nextchan = (chn + 2) % 64;  /* in case of stereo */
-    return chn;
-}
-
 int snd_sfx_play(sfxhnd_t idx, int vol, int pan) {
     sfx_play_data_t data = {0};
     data.chn = -1;
@@ -765,7 +732,7 @@ int snd_sfx_play(sfxhnd_t idx, int vol, int pan) {
 
 int snd_sfx_play_ex(sfx_play_data_t *data) {
     if(data->chn < 0) {
-        data->chn = find_free_channel();
+        data->chn = aica_reserve_channel();
         if(data->chn < 0) {
             return -1;
         }
@@ -773,99 +740,51 @@ int snd_sfx_play_ex(sfx_play_data_t *data) {
 
     uint32_t size;
     snd_effect_t *t = (snd_effect_t *)data->idx;
-    AICA_CMDSTR_CHANNEL(tmp, cmd, chan);
 
     size = t->len;
 
     if(size >= 65535) size = 65534;
 
-    cmd->cmd = AICA_CMD_CHAN;
-    cmd->timestamp = 0;
-    cmd->size = AICA_CMDSTR_CHANNEL_SIZE;
-    cmd->cmd_id = data->chn;
-    chan->cmd = AICA_CH_CMD_START;
-    chan->base = t->locl;
-    chan->type = t->fmt;
-    chan->length = size;
-    chan->loop = data->loop;
-    chan->loopstart = data->loopstart;
-    chan->loopend = data->loopend ? data->loopend : size;
-    chan->freq = data->freq > 0 ? (uint32_t)data->freq : t->rate;
-    chan->vol = data->vol;
+    aica_set_sample(data->chn, (aica_smtype_t)t->fmt, t->locl, data->loopstart,
+                    data->loopend ? data->loopend : size, data->loop);
+    aica_set_vol(data->chn, data->vol);
+    aica_set_pan(data->chn, t->stereo ? 0 : data->pan);
+    aica_set_freq(data->chn, data->freq > 0 ? (uint32_t)data->freq : t->rate);
 
-    if(!t->stereo) {
-        chan->pan = data->pan;
-        snd_sh4_to_aica(tmp, cmd->size);
+    if(t->stereo) {
+        aica_set_sample(data->chn + 1, (aica_smtype_t)t->fmt, t->locr,
+                        data->loopstart, data->loopend ? data->loopend : size,
+                        data->loop);
+        aica_set_vol(data->chn, data->vol);
+        aica_set_pan(data->chn, 255);
+        aica_set_freq(data->chn, data->freq > 0 ? (uint32_t)data->freq : t->rate);
+
+        aica_start(data->chn + 1);
     }
-    else {
-        chan->pan = 0;
 
-        snd_sh4_to_aica_stop();
-        snd_sh4_to_aica(tmp, cmd->size);
-
-        cmd->cmd_id = data->chn + 1;
-        chan->base = t->locr;
-        chan->pan = 255;
-        snd_sh4_to_aica(tmp, cmd->size);
-        snd_sh4_to_aica_start();
-    }
+    aica_start(data->chn);
 
     return data->chn;
 }
 
 void snd_sfx_stop(int chn) {
-    AICA_CMDSTR_CHANNEL(tmp, cmd, chan);
-    cmd->cmd = AICA_CMD_CHAN;
-    cmd->timestamp = 0;
-    cmd->size = AICA_CMDSTR_CHANNEL_SIZE;
-    cmd->cmd_id = chn;
-    chan->cmd = AICA_CH_CMD_STOP;
-    chan->base = 0;
-    chan->type = 0;
-    chan->length = 0;
-    chan->loop = 0;
-    chan->loopstart = 0;
-    chan->loopend = 0;
-    chan->freq = 44100;
-    chan->vol = 0;
-    chan->pan = 0;
-    snd_sh4_to_aica(tmp, cmd->size);
+    aica_stop(chn);
 }
 
 void snd_sfx_stop_all(void) {
-    int i;
+    uint64_t mask = aica_reserved_channels();
+    unsigned int i;
 
-    for(i = 0; i < 64; i++) {
-        if(sfx_inuse & (1ULL << i))
-            continue;
-
-        snd_sfx_stop(i);
+    for(i = 0; mask && i < 64; i++, mask >>= 1) {
+        if(mask & 0x1)
+            aica_stop(i);
     }
 }
 
 int snd_sfx_chn_alloc(void) {
-    int old, chn;
-
-    old = irq_disable();
-
-    for(chn = 0; chn < 64; chn++)
-        if(!(sfx_inuse & (1ULL << chn)))
-            break;
-
-    if(chn >= 64)
-        chn = -1;
-    else
-        sfx_inuse |= 1ULL << chn;
-
-    irq_restore(old);
-
-    return chn;
+    return aica_reserve_channel();
 }
 
 void snd_sfx_chn_free(int chn) {
-    int old;
-
-    old = irq_disable();
-    sfx_inuse &= ~(1ULL << chn);
-    irq_restore(old);
+    aica_unreserve_channel(chn);
 }
