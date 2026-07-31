@@ -124,14 +124,14 @@ static inline void arch_dcache_purge_line(void *src) {
     uintptr_t *ptr = (uintptr_t *)src;
 
     __asm__ ("ocbp @%8\n\t"
-             : "=m"(ptr[0]),
-               "=m"(ptr[1]),
-               "=m"(ptr[2]),
-               "=m"(ptr[3]),
-               "=m"(ptr[4]),
-               "=m"(ptr[5]),
-               "=m"(ptr[6]),
-               "=m"(ptr[7])
+             : "+m"(ptr[0]),
+               "+m"(ptr[1]),
+               "+m"(ptr[2]),
+               "+m"(ptr[3]),
+               "+m"(ptr[4]),
+               "+m"(ptr[5]),
+               "+m"(ptr[6]),
+               "+m"(ptr[7])
              : "r" (ptr)
     );
 }
@@ -140,14 +140,14 @@ static inline void arch_dcache_wback_line(void *src) {
     uintptr_t *ptr = (uintptr_t *)src;
 
     __asm__ ("ocbwb @%8\n\t"
-             : "=m"(ptr[0]),
-               "=m"(ptr[1]),
-               "=m"(ptr[2]),
-               "=m"(ptr[3]),
-               "=m"(ptr[4]),
-               "=m"(ptr[5]),
-               "=m"(ptr[6]),
-               "=m"(ptr[7])
+             : "+m"(ptr[0]),
+               "+m"(ptr[1]),
+               "+m"(ptr[2]),
+               "+m"(ptr[3]),
+               "+m"(ptr[4]),
+               "+m"(ptr[5]),
+               "+m"(ptr[6]),
+               "+m"(ptr[7])
              : "r" (ptr)
     );
 }
