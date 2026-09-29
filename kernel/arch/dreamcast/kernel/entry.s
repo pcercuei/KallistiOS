@@ -20,7 +20,6 @@
 	.align		2
 	.globl		_irq_srt_addr
 	.globl		_irq_handle_exception
-	.globl		_irq_save_regs
 	.globl		_vma_table_100
 
 ! Static kernel-mode stack; we can get away with this because in our
@@ -34,8 +33,16 @@
 	.space		4096		! One page
 krn_stack:
 
-! All exception vectors lead to Rome (i.e., this label).
-_irq_save_regs:
+! The SH4 has very odd exception handling. Instead of having a vector
+! table like a sensible processor, it has a vector code block. *sigh*
+! Thus this table of assembly code. Note that we can't catch reset
+! exceptions at all, but that really shouldn't matter.
+	.text
+	.align 2
+
+_vma_table_100:		! General exceptions
+	mov	#1,r4			! Set exception code
+_vma_hdl:
 	mov.l	_irq_srt_addr,r5	! Grab the location of the reg store
 	mov.l	hdl_except,r2		! Call handle_exception
 	add	#0x20, r5
@@ -198,18 +205,13 @@ _irq_srt_addr:
 hdl_except:
 	.long	_irq_handle_exception
 
-_vma_table_100:		! General exceptions
-	nop				! Can't have a branch as the first instr
-	bra	_irq_save_regs
-	mov	#1,r4			! Set exception code
-	
-	.rep	0x300 - 6
+	.rep 0x300 - 260
 	.byte	0
 	.endr
 
 _vma_table_400:		! TLB miss exceptions (MMU)
 	nop
-	bra	_irq_save_regs
+	bra	_vma_hdl
 	mov	#2,r4			! Set exception code
 
 	.rep	0x200 - 6
@@ -218,5 +220,5 @@ _vma_table_400:		! TLB miss exceptions (MMU)
 
 _vma_table_600:		! IRQs
 	nop
-	bra	_irq_save_regs
+	bra	_vma_hdl
 	mov	#3,r4			! Set exception code
