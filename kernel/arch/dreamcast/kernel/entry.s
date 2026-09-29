@@ -21,6 +21,7 @@
 	.globl		_irq_srt_addr
 	.globl		_irq_handle_exception
 	.globl		_irq_save_regs
+	.globl		_vma_table_100
 
 ! Static kernel-mode stack; we can get away with this because in our
 ! tiny microkernel, only one thread will ever actually be sitting inside
@@ -197,18 +198,6 @@ _irq_srt_addr:
 hdl_except:
 	.long	_irq_handle_exception
 
-! The SH4 has very odd exception handling. Instead of having a vector
-! table like a sensible processor, it has a vector code block. *sigh*
-! Thus this table of assembly code. Note that we can't catch reset
-! exceptions at all, but that really shouldn't matter.
-	.text
-	.align 2
-	.globl _irq_vma_table
-_irq_vma_table:
-	.rep	0x100
-	.byte	0
-	.endr
-	
 _vma_table_100:		! General exceptions
 	nop				! Can't have a branch as the first instr
 	bra	_irq_save_regs

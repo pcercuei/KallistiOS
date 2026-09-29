@@ -273,7 +273,7 @@ static void irq_handle_trapa(irq_t code, irq_context_t *context, void *data) {
         hnd->hdl(IRQ_TRAP_CODE(vec), context, hnd->data);
 }
 
-extern void irq_vma_table(void);
+extern unsigned char vma_table_100[];
 
 /* Switches register banks; call this outside of exception handling
    (but make sure interrupts are off!!) to change where registers will
@@ -306,7 +306,7 @@ void arch_irq_create_context(irq_context_t *context,
     context->fpscr = __builtin_sh_get_fpscr();
     context->r[15] = stack_pointer;
     context->r[14] = 0xffffffff;
-    context->vbr = (uint32_t)irq_vma_table;
+    context->vbr = (uint32_t)vma_table_100 - 0x100;
 
     /* Copy up to four args */
     context->r[4] = args[0];
@@ -374,7 +374,7 @@ int irq_init(void) {
 
     /* Set VBR to our exception table above, but don't enable
        exceptions and IRQs yet. */
-    __asm__("ldc r0,vbr" :: "z"(irq_vma_table));
+    __asm__("ldc r0,vbr" :: "z"((uint32_t)vma_table_100 - 0x100));
 
     initted = true;
 
